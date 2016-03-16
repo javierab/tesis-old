@@ -1,0 +1,19 @@
+#run model
+
+./../bonnmotion-3.0.0/bin/bm -f randomwalk_50n_100s RandomWalk -n 50 -t 100
+
+
+#generate basic statistics for range 50m
+
+./../bonnmotion-3.0.0/bin/bm Statistics -f test -r 50
+
+
+#generate csv
+
+./../bonnmotion-3.0.0/bin/bm CSVFile -f randomwalk_50n_100s
+
+
+#open from theOne
+
+
+

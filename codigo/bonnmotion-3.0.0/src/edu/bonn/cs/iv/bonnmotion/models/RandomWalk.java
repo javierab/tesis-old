@@ -96,6 +96,7 @@ public class RandomWalk extends RandomSpeedBase {
 		// we've got a predecessor, so a transition is needed
 		predecessorScenario = _pre;
 		transitionMode = _transitionMode.intValue();
+		System.out.println("transition");
 		isTransition = true;
 		go(args);
 	}
@@ -103,8 +104,10 @@ public class RandomWalk extends RandomSpeedBase {
 	public void generate() {
 		SortedMap<Double, Position> dstList = new TreeMap<Double, Position>();
 		double maxDist;
-		
+		System.out.println("pregenerate");
+
 		preGeneration();
+		System.out.println("generate");
 
 		for (int i = 0; i < parameterData.nodes.length; i++) {
 			parameterData.nodes[i] = new MobileNode();
@@ -184,6 +187,7 @@ public class RandomWalk extends RandomSpeedBase {
 				src = dst;
 			}
 		}
+		System.out.println("postgenerate");
 
 		postGeneration();
 	}
