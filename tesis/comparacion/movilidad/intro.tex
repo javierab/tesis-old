@@ -1,0 +1,35 @@
+En la simulación de DTNs, los patrones de movilidad son fundamentales para emular el comportamiento de personas y paquetes de manera verosimil, lo que es importante para poder determinar cómo se comportará un protocolo en su contexto real de implementación.
+
+La transmisión ocurre cuando los nodos se encuentran entre sí, intercambiando información de control y mensajes si los protocolos lo consideran apropiado. El tiempo que tarda un nodo en entrar en contacto con otro se denomina \emph{tiempo de encuentro}. El tiempo de contacto entre ellos, lo cual definirá las posibilidades de enviar datos entre sí mientras dure el contacto, se denomina \emph{tiempo de contacto}. Si no pueden concluir el intercambio de paquetes en ese tiempo, deben esperar hasta entrar nuevamente en contacto. Esto se denomina \emph{tiempo inter-encuentros}. Para realizar un análisis realista es necesario conocer estadísticamente estas tres cantidades. 
+
+Los modelos de movilidad son generados utilizando trazas reales y modelos sintéticos con respaldo teórico, con lo que se busca lograr escenarios realistas. Generalmente, los distintos protocolos son evaluados utilizando ciertos modelos tradicionales, y se utilizan características especiales para afinar y demostrar mejoras en usos específicos de los protocolos, como redes vehiculares o de personas en contextos específicos. Se presentan algunos de los modelos más utilizados, clasificados en tres categorías.
+
+La más simple y tradicional familia de modelos de movimiento son los de \emph{Random Mobility} o movimiento aleatorio, de los cuales destacan:
+
+\begin{enumerate}
+	\item Random Walk (RW)
+	\item Random Walkway Point (RWP) 
+	\item Random Direction (RD)
+	\item Levy Walks (LW) 
+\end{enumerate}
+
+Otro tipo de modelos es derivado de patrones aleatorios, pero limitados a un mapa. En estos modelos los datos del mapa son incluídos utilizando el formato \emph{Well Known Text} (WKT), utilizando ampliamente en modelos de información geográfica (GIS). Algunos de los más populares modelos basados en mapas son:
+
+\begin{enumerate}
+	\item Map-Based Mobility Model (MBM)
+	\item Shortest Path-Based Map (SPBM)
+	\item Route-Based Map (RBM)
+	\item Manhattan Mobility Model (MMM)
+\end{enumerate}
+
+En aquellas aplicaciones de DTNs donde los nodos son humanos, animales o vehículos que poseen ciertos patrones de movimiento, es posible explotar estos patrones para mejorar el desempeño de los protocolos. Estos patrones incluyen recorridos y modelos sociales basados en el comportamiento humano, por ejemplo:
+
+\begin{enumerate}
+	\item Community-Based Mobility Model (CMM)
+	\item Time-Variant Community Model (TVCM)
+	\item Working Day Movement (WDM)
+	\item General Social Mobility Model (GeSoMo)
+	\item Disaster Scenario (DS)
+\end{enumerate}
+
+Estos patrones de movilidad pueden ser configurados por cada nodo, por lo que es posible combinar varios modelos de movimiento en una simulación. A continuación se describe cada modelo en profundidad, analizando sus características y los escenarios que buscan representar.

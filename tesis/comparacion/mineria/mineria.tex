@@ -1,0 +1,24 @@
+Para determinar la comunicación existente y posible en minería, es necesario separar la minería de rajo abierto, que suele contar con redes celulares negociadas directamente con los proveedores de internet  ---exceptuando aquellas de pequeña escala y artesanal---, y la minería subterránea, donde no existen los medios de comunicación disponibles en la superficie. Por esto, ha surgido tecnología dedicada a la minería subterránea, que a su vez cuenta con una gran variabilidad de ambientes como túneles y galerías. A continuación se presenta una revisión de las características más importantes en estos ambientes, tomadas del estudio realizado por Mauricio Contreras \cite{tesis} de comunicación en minas chilenas subterráneas, y del informe interno de Codelco para Intraestructura en Minas Subterráneas\cite{doccodelco}.
+
+\section{Características Importantes}
+
+La comunicación en minería es fundamental para la coordinación de actividades, imprescindible para evitar accidentes que pueden ser fatales. Se hace énfasis a la comunicación de seguridad, tanto de datos tomados por sensores como de alertas para notificar un potencial problema humano que podría desencadenar una falla de mayor escala.
+
+\begin{enumerate}
+\item \textbf{Robustez:} Dado que las minas subterráneas están sujetas a potenciales colapsos y otros riesgos, la habilidad de un equipo de comunicación de emergencia de mantenerse operacional ante un accidente es fundamental. Por ello, se requiere una infraestructura de red que no se desconecte con un daño estructural.
+
+\item \textbf{Flexibilidad:} El ambiente de las minas está continuamente cambiando por el proceso de extracción. Esto resulta en una necesidad continua de expandir y modificar la conectividad necesaria. Los sistemas que requieren un gran esfuerzo de instalación ofrecen una menor flexibilidad, pero a la vez, un sistema totalmente inalámbrico puede congestionarse al expandirse el sistema.
+
+\item \textbf{Rango/Cobertura:} Dadas las distancias potencialmente largas entre los operarios, y el hecho de que la topología de la mina es complicada y cambiante, es necesaria una alta cobertura en las distintas ubicaciones donde puedan estar desarrollándose las actividades. Los sistemas de radio, ampliamente utilizados en minería, poseen un alcance bajo al estar bajo tierra.
+\end{enumerate}
+
+\section{Comunicación actual}
+En la actualidad, existen topologías de red principalmente cableadas en minas subterráneas, especialmente en aquellas donde la operación es guiada remotamente, por lo que se requiere una conectividad en tiempo real para obtener un desempeño óptimo. Aún así, existen diversas zonas y niveles de varios kms de longitud donde no existe conectividad más allá de las radios portadas por equipos de operarios.
+
+Existe un espectro de frecuencias (entre 600 y 3000Hz) que permite una propagación de señal de radio a distancias considerables a través de la tierra (\emph{Through the Earth} o TTE), pero requieren la instalación de antenas muy grandes, por lo que necesitan un espacio grande para ser instaladas. Estas suelen brindar comunicación en una dirección, usando una antena grande en el exterior y equipos pequeños sobre los operarios, que pueden recibir información en caso de emergencias tal como las áreas afectadas o las rutas de escape.
+
+El uso de radios entre operarios es basado en Push-To-Talk (PTT), donde los operarios deben sintonizar un mismo canal, y presionar un botón para hablar, y luego soltándolo para escuchar. Las radios usualmente permiten varios canales, pudiendo sincronizar grupos a través del uso de éstos. 
+
+Es también común dividir a los usuarios, desde una perspectiva de comunicación, por sus unidades jerárquicas (como mantenimiento, operaciones, supervisores, etc). Una unidad jerárquica puede poseer uno o más canales asignados. Cabe mencionar que las distintas unidades conviven en los mismos espacios, pero el alto ruido ambiental y las orejeras utilizadas por ello hacen que no fluya información entre los distintos grupos.
+
+Estos factores generan segregación de operarios en grupos pequeños (al alcance de radio) y divididos por jerarquías, que sólo obtienen información desde el exterior, sin poder notificar el estado actual de la zona entre sí ni hacia el exterior.

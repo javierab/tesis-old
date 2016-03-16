@@ -1,0 +1,16 @@
+\section{Modelos Limitados por Mapas}
+
+\subsection{Map-Based Mobility Models}
+Este modelo aleatorio basado en mapas es un derivado de Random Walk. Aquí, un nodo se mueve en una dirección siguiendo los caminos determinados por el mapa dado. Esto permite distinguir entre distintos nodos, como automóviles y peatones, separando los caminos posibles para cada categoría. Los nodos avanzan por un segmento hasta encontrar el fin de una calle o una intersección, donde deciden aleatoriamente una nueva dirección, pero no vuelven por donde venían. Al viajar una cierta distancia, los nodos se detienen por un tiempo y luego continúan su viaje. Al concluir la simiulación, se obtiene una distribución aleatoria de los nodos en todo el mapa. Una limitación de este modelo es que los nodos siguen caminos definidos por el mapa aleatoriamente, generando patrones de movimiento poco similares a las trazas reales. 
+
+\subsection{Shortest Path-Based Map Mobility Model}
+
+Este modelo es una mejora de MBMM, donde los nodos viajan a un cierto destino en el mapa siguiendo el algoritmo de Dijkstra de caminos mínimos para encontrar la mejor ruta a su destino. Todas las ubicaciones del mapa tienen la misma probabilidad de ser escogida, pero también se incluen Puntos de Interes (\emph{POIs} en inglés), cuya probabilidad es configurable. Estos POIs son también agrupables. Esto otorga una gran ventaja al modelar lugares donde la gente tiene a reunirse, como restaurantes, supermercados o atracciones turísticas. Aún así, no asegura tiempos inter-contacto ni distribuciones de tiempo de contacto similares a las trazas reales cuando el número de nodos es pequeño.
+
+\subsection{Route-Based Map Mobility Model}
+
+Este modelo añade la asignación de rutas predefinidas en el mapa a algunos nodos. Esto genera un mejor desempeño al simular, por ejemplo, el transporte público, donde las rutas son conocidas de antemano. En este modelo, las rutas en el mapa contienen muchos puntos denominados paradas en la ruta, donde los nodos esperan cierto tiempo hasta avanzar a la próxima parada. Para llegar a su destino, los nodos siguen el camino mínimo. Existen algunas variantes, como Street Random Waypoint (STRAW) donde los nodos viajan acorde a un tráfico vehicular realista en caminos definidos por un mapa real.
+
+\subsection{Manhattan Mobility Model}
+
+MMM es un modelo basado en mapa ampliamente utilizado para imitar el movimiento de áreas urbanas. El mapa de MMM genera una grilla de lineas horizontales y verticales, que representa las calles en el mapa. Los nodos tienen permitido moverse por estas lineas, y cambiar su dirección con cierta probabilidad al llegar a una intersección, dando al nodo cierta libertad. La configuración de probabilidades al llegar a intersecciones influye en la dependencia espacial y temporal de los nodos, por lo que su análisis matemático puede complicarse.

@@ -1,0 +1,120 @@
+\documentclass[10pt,preprint,onecolumn]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{mathtools, comment, url, hyperref}
+\usepackage[cm]{fullpage}
+\usepackage{setspace}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage[pdftex]{graphicx}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{subcaption}
+\floatstyle{boxed}
+\restylefloat{figure}
+\singlespacing
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+
+
+\title{Algoritmos de enrutamiento para DTNs. Estado del arte.}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+
+\section{Redes Móviles Ad Hoc}
+\label{sec:manet}
+
+\subsubsection{Redes Inalámbricas de Sensores}
+Las redes inalámbricas de sensores (WSN, por su sigla en inglés) representa una clase especial de redes ad hoc que buscan controlar y monitorear eventos. Éstas son desarrolladas y configuradas para aplicaciones específicas, con casos exitosos reconocidos en agricultura~\cite{agric} y monitoreo de estructuras~\cite{struct}. En una red de sensores, se busca que los nodos tomen datos, se comuniquen entre sí y transmitan la información recolectada a un nodo sumidero, donde eventualmente llegan a Internet.
+
+El desarrollo de estas redes ha sido enorme, siendo ahora un área consolidada. Aun así, la dependencia de las aplicaciones obliga a re-pensar todo el sistema al cambiar un escenario. Los protocolos de enrutamiento existentes se pueden agrupar de distintas maneras, destacando dos~\cite{survey2}:
+
+\begin{itemize}
+\item \textbf{Basada en la estructura de la red:} Estos protocolos se catalogan también en tres tipos. Primero, está el enrutamiento de \emph{Comunicación Directa}, donde los nodos envían los datos directamente al sumidero. Este tipo de red consume mucha energía, y genera un gran número de colisiones, por lo que es poco usada. Segundo, está el enrutamiento \emph{Flat Based}, que asigna a todos los nodos la misma funcionalidad. Resulta muy eficiente para redes pequeñas. Finalmente, está en enrutamiento \emph{Jerárquico}, que particiona los nodos en distintos \emph{clusters}, donde las responsabilidades para los nodos de cada cluster pueden ser distintas. Esto se explorará con mayor profundidad en ~\ref{sec:hier}
+
+\item \textbf{Basada en el estado de la información:} Esta categorización depende del conocimiento o las suposiciones que cada nodo pueda tener de la topología de la red, teniendo por una parte el enrutamiento \emph{proactivo}, donde los nodos tienen pre-computadas las rutas, o \emph{reactivo}, donde sólo buscarán una ruta en caso de necesitarla. En el caso de los sensores móviles, resulta impráctico tener un enrutamiento proactivo, pues las mejores rutas no son constantes. Existen también caminos mixtos, los cuales son deseables en nuestro caso, que envían actualizaciones al servidor constantemente para mantener una tabla de ruta relativamente actualizada en cada nodo.
+
+\end{itemize}
+
+
+\subsection{Enrutamiento Oportunistas}
+\label{sec:op}
+El enrutamiento oportunista es una estrategia basada en el uso de \emph{broadcast} para aumentar el número de potenciales reenviadores que puedan cooperar en el envío de los paquetes. Estos algoritmos requieren coordinación entre los nodos para balancear la duplicación de la transmisión manteniendo garantías de recepción de los mensajes. Además, es importante considerar que los nodos tienen \emph{buffers} acotados donde almacenar mensajes tanto propios como ajenos, por lo que resulta necesario considerar este hecho para no bombardear todos los nodos con mensajes, a la vez de avisarles si el mensaje ya llegó a destino para que puedan eliminarlos de su buffer.
+Los algoritmos oportunistas de enrutamiento siguen, generalmente, las siguientes fases secuencialmente:
+\begin{itemize}
+\item Selección de Candidatos: El emisor selecciona un conjunto de nodos que pueden permitir la transmisión del paquete desde el origen al destino. Este conjunto se conoce como los \emph{candidatos de reenvío}. El emisor entonces informa a sus candidatos del conjunto seleccionado.
+
+\item Asignación de prioridad de candidatos: Cuando el emisor informa acerca de sus candidatos, los ordena según la conveniencia de tenerlos en el conjunto basada en alguna métrica, como la probabilidad de pérdida, que debe ser periódicamente medida. 
+
+\item Transmisión de datos: El protocolo envía los datos a su conjunto de candidatos usando \emph{broadcast}. Algunos algoritmos envían los datos como \emph{unicast}, especificando el mejor nodo de reenvío el siguiente salto. 
+
+\item Coordinación del receptor: Sólo uno de los nodos de los candidatos debería continuar con el envío del paquete, y para ello el nodo elegido será responsable de confirmar la recepción de los datos. La elección del nodo ocurre incorporando un procedimiento distribuido en los nodos, buscando que el nodo de reenvío sea aquel con mejor prioridad de aquellos que recibieron el mensaje. Esto se hace a nivel de MAC, por lo que existen propuestas de modificaciones en los campos para llegar a este acuerdo \cite{mac}
+\end{itemize}
+
+Aunque esta secuencia normalmente se sigue, algunas propuestas no implementan estas fases. Por ejemplo \cite{op} propone que cada nodo decida si ser candidato, realizando la priorización entre los nodos y no en el emisor. Cabe notar que este tipo de algoritmos ha sido ampliamente estudiado, existiendo una gran familia de propuestas que han sido probadas en diversos ambientes, incluyendo Redes de Sensores sobre personas\cite{lv1}.
+
+Una propuesta interesante es la de \textbf{enrutamiento epidémico}\cite{epidemic}, donde los nodos inundan la red continuamente replicando y transmitiendo los mensajes a todos los nodos con los que entre en contacto que no posea una copia del mensaje. Aunque existen distintas variantes, este algoritmo resulta muy ineficiente si existe una gran cantidad de datos, saturando en todos los sentidos la red y los nodos, pero permite maximizar la probabilidad de que el mensaje llegue del emisor al receptor. Para el sistema de priorización de mensajes, este protocolo resulta llamativo, pues el volumen de mensajes prioritarios debería ser muy pequeño, y resulta deseable comunicar a todos los vecinos de la alerta emitida por un nodo.
+
+\section{Tolerancia al \emph{Delay}}
+\label{sec:delay}
+
+Una clase de redes que define un nuevo paradigma son las Redes Tolerantes al Delay (DTN por sus siglas en inglés), también llamadas \emph{Challenged Networks}\cite{challenged}. Algunos desafíos únicos surgen cuando cambiamos las hipótesis de las redes basadas en TCP/IP: debe existir un camino \emph{end-to-end} entre el origen y el destino, y el \emph{Round Trip Time} debe ser suficientemente pequeño para que pueda establecerse una conversación. Estas hipótesis dejan de ser válidas en las DTN: la conectividad intermitente hace imposible garantizar un camino entre origen y destino para una transmisión de datos, y el gran delay hace imposible generar \emph{ACKs} y retransmisiones como en TCP/IP. La arquitectura DTN está diseñada para proveer comunicación asíncrona en redes dadas a frecuentes desconexiones, delays largos y variables, y ancho de banda limitado. Además, los dispositivos de una DTN pueden tener limitaciones de almacenamiento y poder. 
+
+Existe una gran cantidad de protocolos de enrutamiento para las DTN, que se pueden categorizar en dos\cite{surveydtn}:
+
+\subsection{Enrutamiento Determinista}
+
+La base del enrutamiento determinista es considerar que el movimiento, y por tanto las futuras conexiones de los nodos, es completamente conocido. Un sistema importante fue el tutorial de Ferreira\cite{graphs}, donde formaliza un modelo que captura la evolución de grafos. Modelar el tiempo permite predecir el tiempo más corto para llegar a destino, o el camino con menor número de saltos.
+Los algoritmos que se proponen en las DTN dependen de la información que se conozca de la topología de la red y de la demanda\cite{16}. Dado que en nuestro problema surgen factores aleatorios, este tipo de enrutamiento no nos será de mayor utilidad, puesto que no conocemos la evolución de la topología, lo cual conduciría a un mal rendimiento.
+
+\subsection{Enrutamiento Estocástico}
+
+El enrutamiento estocástico se utiliza cuando el comportamiento de la red es aleatorio y no se conoce. Estos protocolos dependen del momento en que se envían los paquetes: la decisión más fácil es enviar a todos los contactos en el rango.
+Como se mencionó en \ref{sec:op}, la decisión más simple es enviar los paquetes a todos los nodos con los que entre en contacto.
+
+\begin{enumerate}
+\item \textbf{Enrutamiento Epidémico}
+
+Como se vio, la manera más simple de lidiar con una topología desconocida y patrones de movimiento no determinados es utilizar un comportamiento epidémico.
+
+En \cite{epidemic} se propone un protocolo de enrutamiento epidémico para redes intermitentemente conectadas: cuando un mensaje llega a un nodo intermediario, el nodo inunda a todos sus vecinos con éste. Así los mensajes son rápidamente distribuidos por las secciones conexas de la red. La simulación que ellos realizaron muestra que así se puede llegar a despachar prácticamente todos los mensajes transmitidos.
+
+Pero también existen estrategias más conservadoras. Dependiendo de las suposiciones de movimiento de los nodos ---como por ejemplo, asumir que todo nodo se cruza con otro en un tiempo determinado--- es posible establecer protocolos de una cantidad de saltos acotado, como es el caso de \cite{teo2}, donde sólo se ejecutan dos saltos. Esto puede funcionar en modelos donde el almacenamiento se considere infinito, pero una cantidad grande de nodos, con alto delay y sin conocer la evolución de la topología puede resultar en una suposición demasiado fuerte que provoque pérdidas de una gran cantidad de paquetes.
+
+Un protocolo interesante es el de Spraying \cite{24}, que restringe el envío del paquete a la vecindad de la última ubicación conocida del destinatario. Esto por supuesto implica mantener datos de la ubicación de los nodos.
+
+\item \textbf{Enrutamiento por estimación del enlace}
+
+En vez de enviar ciegamente los paquetes a todos (o algunos) de los vecinos, los nodos intermedios pueden intentar estimar la probabilidad de eventualmente llegar a destino para cada enlace. Basada en esta estimación, los nodos pueden decidir si guardar el paquete y esperar, o enviarlo a algún otro nodo para que lo reenvíe. \cite{49} es un trabajo teórico que provee en la estimación del enlace. Algunos protocolos hacen estimaciones basadas sólo en la información  del siguiente salto\cite{26}, mientras otros guardan métricas \emph{end-to-end}, tal como el camino más corto esperado o el delay promedio.
+
+Todo ahorro en el envío de los datos se contrapesa con la necesidad de tener información de la red, sea tanto un modelo \emph{a priori} del movimiento de los nodos, como el destinar un espacio en el nodo para guardar datos de los otros nodos para poder realizar estimaciones que permitan enviar los datos por buenos caminos. 
+\end{enumerate}
+
+\section{Data Mules}
+\label{sec:mules}
+
+La recolección de datos en el contexto de las DTN puede resultar más eficiente utilizando \emph{Data Mules}, es decir, nodos móviles que llevan datos desde los sensores hasta la infraestructura de red~\cite{datamule1}. Dependiendo de la aplicación, las \emph{mulas} pueden ser parte del ambiente externo~\cite{mulemob}, como por ejemplo en autos que pasan, o parte de la infraestructura de red~\cite{int1}, como por ejemplo en un robot que recorre distintas zonas. Estos dispositivos visitan los nodos según algún patrón de movilidad, recogen los datos, y los llevan a un punto de acceso.
+Existe amplio desarrollo tanto en las mulas en sí~\cite{mule1}, como en los esquemas y algoritmos involucrados incluyendo la transferencia de datos~\cite{mulestopwait, mulewindow}, el patrón de movilidad~\cite{mulemob} y la pérdida de mensajes~\cite{muleloss}.
+
+Un caso notable de esta estrategia es el de ZebraNet\cite{11}, donde sensores inalámbricos se pusieron en cuellos de cebras en África recogiendo datos de ubicación, y reportando oportunisticamente sus datos cuando entraban en el rango de las estaciones base. Adicionalmente, se incorporaron \emph{Data Mules} consistentes en nodos voladores para recolectar datos. 
+
+Se tiene, finalmente, que cualquier estrategia utilizada requerirá un balance dado por los datos que se puedan obtener o inferir de la red, mientras que mayor desinformación requiere más inundación de datos, generando un mayor consumo en energía y almacenamiento.
+
+
+\section{Enrutamiento jerárquico}
+\label{sec:hier}
+
+Una jerarquía es creada cuando un subconjunto de los nodos tiene más responsabilidades que otros nodos en la red. En el enrutamiento jerárquico, algunos nodos toman el rol pasivo de escuchar el tráfico, mientras otros toman roles activos distribuyendo el tráfico, manejando a sus vecinos, etc \cite{51}. En vez de transmitir los datos directamente a un sumidero, todos los nodos transmiten sus datos a ciertos nodos denominados \emph{cabezas} de su conjunto, también llamados \emph{agregadores}\cite{105}. Este nodo recibe los datos y elimina información redundante, reduciendo así el consumo energético. También logra mejorar la complejidad de la red dada la estructura que toma. 
+
+Una propuesta es la jerarquía plana, donde los nodos cooperan entre sí para entregar ciertos paquetes. Otra jerarquía es de \emph{cluster}, donde los nodos se organizan en zonas, teniendo que cada zona cuenta con una cabeza, y un conjunto de cabeza conforman una supra-cabeza, haciendo así que el enrutamiento entre zonas esté controlado. Esto tiene la ventaja de controlar el tráfico, pero puede generar un cuello de botella en los nodos cabeza\cite{62}.
+
+Algunas de las tareas que pueden tomar los nodos son las de recolectar datos, mantener la tabla de ruta, y procesar datos. \cite{130} propone dividir esas tres tareas en distintos nodos. Esto es una buena idea para redes normales, pero en nuestro caso, donde tendremos desconexiones, puede ser limitante si no existe un balance entre las tres funcionalidades de los nodos.
+
+Dado que en nuestro caso tenemos roles bien definidos, podemos guiar nuestro enrutamiento por el modelo de movimiento de los nodos, intentando resolver los problemas de navegación para los elementos móviles. Una estrategia es la propuesta en \cite{110}, donde los nodos reportan su movimiento, logrando así mantener una tabla de localización de los nodos que logra mejorar el desempeño de la red. Otro protocolo interesante es el de \cite{117}, que se basa en la cooperación de los nodos, tal que si un nodo escucha un mensaje de A a B, y uno de B a A, sabe que él se encuentra en el medio del camino, y por tanto se ofrece como nodo intermedio de la comunicación.
+
+\bibliographystyle{plain}
+\bibliography{state}
+
+\end{document}

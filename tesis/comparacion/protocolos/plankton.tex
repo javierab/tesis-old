@@ -1,0 +1,13 @@
+%probabilista, replicas
+\subsubsection{Plankton }
+Plankton\cite{plankton} intenta balancear la probabilidad de entrega y el control de réplicas utilizando una estimación de lo \emph{débil} o \emph{fuerte} que es un enlace, es decir, la probabilidad de entrega utilizándolo en un contacto.
+
+Plankton toma tres estimaciones, y define su probabilidad como el máximo de las tres. Comienza considerando todos los enlaces débiles, y aproximando la probabilidad de entrega $\rho$ de estos enlaces como:
+$$\rho = \frac{\mbox{promedio de nodos encontrados dentro de una ventana de tiempo por el nodo}}{\mbox{número total de nodos -1}}$$
+Luego, calcula $\rho_^b_{u,v}$, la probabilidad \emph{en ráfagas} de encuentro, revisando los contactos en últimos $n$ intervalos de tiempo, tal que si $v$ encuentra a $u$ en $\nu_u$ ocasiones en los últimos $n$ intervalos, $\rho^b_{u,v} = \nu_u /n $.
+Finalmente, calcula $\rho^a_{u,v}$, que captura la idea de que si cada vez que $v$ encuentra a $w$, encuentra frecuentemente a $u$, entonces cuando $v$ encuentra a $w$ la probabilidad de encontrar a $u$ es alta. Esto se calcula como $\rho^a_{u,v} = \max_i\{\rho^a_{v,i,u} \mbox{: $i$ es un encuentro reciente de $v$}\}$
+Utilizando estos tres estimadores, y calculando $\rho_{u,v} = \max\{\rho, \rho^b_{u,v}, \rho^a_{u,v}\}$, se logra complementar, por una parte los contactos sin historia y por lo tanto poco confiables, capturados en $\rho$, los encuentros recientes en $\rho^b$ y la asociación en contactos en largo plazo con $\rho^a$, cubriendo con esto más casos que la estimación única de los otros protocolos. Se define entonces que un enlace es fuerte si $\rho_{u,v}$ es mayor que su $\rho$.
+
+Otra novedad de Plankton está en su control de réplicas. Inicialmente, el nodo estima el número de réplicas que va repartiendo al enviar a otros nodos. Si $u$ tiene un mensaje para $v$, y $u$ encuentra a $w$, entonces $u$ verifica si $w$ tiene un enlace fuerte con $v$. Si no es el caso, entonces reparte copias para seguir buscando un camino confiable hacia $v$. Si, por otra parte, el enlace es fuerte, entonces le entrega copias pero disminuye el número de éstas, ya que si tienen un enlace fuerte la probabilidad de entrega directa es mayor, por lo que no requiere esparcirse epidémicamente.
+
+Finalmente, Plankton se compara con RAPID, Spray and Wait, MaxProp y BUBBLE, logrando mejores resultados dado que limita las copias y encuentra buenos caminos, siendo el de mejor Tasa de Entrega, bajo overhead y baja latencia. 

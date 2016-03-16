@@ -1,0 +1,43 @@
+
+\begin{figure}[H]
+\begin{tikzpicture}
+  [auto,every node/.style={rectangle,draw, text centered, text width=2.0cm,minimum height=1.5cm },node distance=4cm]
+\tikzset{%
+level 1/.style={sibling distance = 11.1cm, level distance=2cm,edge from parent path={(\tikzparentnode.south) -- (\tikzchildnode.north)}},
+level 2/.style={sibling distance = 7.5cm, level distance=2cm,edge from parent path={(\tikzparentnode.south) -- (\tikzchildnode.north)}},
+level 3/.style={sibling distance = 2.5cm, level distance=2cm,edge from parent path={(\tikzparentnode.south) -- (\tikzchildnode.north)}},
+level 4/.style={sibling distance = 2.5cm, level distance=2cm,edge from parent path={(\tikzparentnode.south) -- (\tikzchildnode.north)}},
+level 5/.style={sibling distance = 2.5cm, level distance=2cm,edge from parent path={(\tikzparentnode.south) -- (\tikzchildnode.north)}},
+level 6/.style={sibling distance = 2.5cm, level distance=2cm,edge from parent path={(\tikzparentnode.south) -- (\tikzchildnode.north)}},
+}
+
+\node (0){DTN}
+    child {node (1) {Replicative}
+              child {node (2) {Controlled \\ Copies #}
+                child{node (3) {No additional \\ info}
+                    child[blue]{node (4) {Spray and \\Wait}}}
+                child{node {Utility\\ function}
+                    child[blue]{node {Spray and Focus}
+                    child{node {SCAR}
+                    child{node {CRHC}}}}}
+                child{node {Encounters\\ history}
+                    child[blue]{node{PRoPHET}}}
+                child{node {Probabilistic \\ estimation}
+                    child[blue]{node{Plankton}}}}
+              child {node {Unlimited \\Copies}
+                child{node {No additional \\ info}
+                    child[blue]{node {Epidemic}}}
+                child{node {Probabilistic \\ estimation}
+                    child[blue]{node {MaxProp}
+                    child{node {RAPID}}}}}
+              }
+    child {node {Forwarding}
+              child {node (5){Encounters \\ history}
+                child[blue] {node (6){PER}
+                child {node {SMART}}}}
+              child {node (5){Social and \\mobility info}
+                child[blue] {node (6){SOLAR}
+                child {node {BUBBLE}}}}};
+\end{tikzpicture}
+\label{fig:tax}
+\end{figure}

@@ -1,0 +1,40 @@
+\documentclass[10pt,preprint,onecolumn]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{mathtools, comment, url, hyperref}
+\usepackage[cm]{fullpage}
+\usepackage{setspace}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage[pdftex]{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{trees}
+\usepackage{caption}
+\usepackage{cite}
+\usepackage{subcaption}
+\usepackage{lscape}
+\restylefloat{figure}
+\singlespacing
+
+\begin{document}
+
+\part{Underground Mining}
+%% proceso de extraccion, limitaciones fisicas, logicas, movilidad
+%% no gps, priorizacion, alertas, nodos heterogeneos
+
+
+
+% underground mining background
+\section{Communications in Underground Mining}
+\input{mineria}
+% specific codelco needs and 
+\section{Codelco's requirements}
+\input{requerimientos}
+\section{Process description and modelling}
+\input{proceso}
+
+\bibliographystyle{plain}
+\bibliography{comp.bib}
+
+\end{document}

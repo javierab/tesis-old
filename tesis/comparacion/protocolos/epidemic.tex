@@ -1,0 +1,5 @@
+%epidemic
+\subsubsection{Epidemic}
+Es un protocolo simple ideado para DTNs que no requiere conocimiento sobre la red. Epidemic\cite{epidemic} replica los mensajes que desea enviar cada vez que se encuentra con un nodo entregándole aquellos que no tiene y vice versa, hasta que éstos lleguen a su destinatario o se pierdan por su TTL. A pesar de que esta estrategia alcanza una muy buena tasa de entrega y delay, el costo de replicar todos los mensajes es muy alto si se tiene una alta densidad de mensajes, ya que se colapsa la red innecesariamente. 
+
+Existen algunas versiones de mayor inteligencia: Epidemic probabilista que replica el mensaje al nodo que ve con cierta probabilidad, y Epidemic optimizando una cierta función de utilidad donde decide copiar un mensaje sólo si el nodo encontrado es mejor candidato para entregarlo.

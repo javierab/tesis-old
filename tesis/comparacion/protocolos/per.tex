@@ -1,0 +1,4 @@
+%forwarding, historia de encuentros, prob. semi-markov
+\subsubsection{PER}
+PER\cite{per} es un protocolo probabilista de reenvío. Se basa en estrategias para predecir el futuro de la red, como probabilidad de entrega de mensajes o estimación del próximo encuentro con un nodo. PER determina el próximo salto de los mensajes considerando la distribución de probabilidad de los próximos contactos para maximizar la probabilidad de entrega al destinatario final. Se utiliza un proceso \emph{semi-markov} para predecir la distribución de probabilidades del tiempo de contacto y de la probabilidad de encuentro de dos nodos, por lo que es complejo de implementar.
+Su uso en simulaciones determina que tiene una mejor tasa de entrega que los protocolos usuales de enrutamiento, con una latencia normal pero con energía y ancho de banda grandes. No requiere mucho almacenamiento al realizar \emph{forwarding}, pero sí capacidad de procesamiento de los nodos.

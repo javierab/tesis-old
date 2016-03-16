@@ -1,0 +1,42 @@
+\documentclass[letter,10pt]{article}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{automata,arrows,positioning,calc}
+\begin{document}
+\begin{center}
+\begin{tikzpicture}[->, >=stealth', auto, semithick, node distance=7cm]
+\tikzstyle{every state}=[fill=white,draw=black,thick,text=black,scale=0.8]
+    \node[state]    (A)                     {CEC};
+    \node[state]    (B)[right of=A]   {ACC};
+    \node[state]    (C)[below right of=A]   {EXT};
+    \node[state]    (D)[below right of=B]   {LAT};
+    \node[state]    (E)[below of= C]         {MAN$_i$};
+\path
+
+%centro civico
+(A) edge[loop left]             node{$0.6$}                                 (A) %me quedo en CC
+    edge[bend left]             node{$0.4$}                                 (B) %ir al área de decision
+    
+%acceso    
+(B)
+    edge[bend left]             node{$0.2$}                                 (A) %volver al CC
+    edge[bend right, left]      node{$0.5$}                                 (C) %ir al area de extraccion
+    edge[bend left, left]       node{$0.3$}                                 (D) %ir a laterales
+    
+%extraccion
+(C) edge[bend left, right]      node{$\frac{0.4}{|I|}, \forall i\in I$}     (E)  %ir a una de las mantenciones
+    edge[loop right]            node{$0.2$}                                 (C) %ir a otro punto en el área de extracción
+    edge[bend right, right]     node{$0.2$}                                 (B) %volver al al acceso
+    edge[bend left, above]      node{$0.2$}                                 (A) %volver al CC
+    
+%laterales
+(D) edge[bend left, right]      node{$0.3$}                                 (B) %volver al acceso
+    edge[bend right=100, above] node{$0.7$}                                 (A) %volver al CC
+    
+%mantencion
+(E) edge[loop right]            node{$\frac{0.4}{|I|}, j\neq i, j\in I$}    (E) %ir a otra mantención
+    edge[bend left]            node{$0.3$}                                 (C) %volver a la zona de extracción
+    edge[bend left]             node{$0.3$}                                 (A);%volver al CC
+\end{tikzpicture}
+\end{center}
+\end{document}

@@ -1,0 +1,130 @@
+\documentclass[10pt,preprint,onecolumn]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{mathtools, comment, url, hyperref}
+\usepackage[cm]{fullpage}
+\usepackage{setspace}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage[pdftex]{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{trees}
+\usepackage{caption}
+\usepackage{cite}
+\usepackage{subcaption}
+\usepackage{lscape}
+\restylefloat{figure}
+\singlespacing
+
+\begin{document}
+
+%% proceso de extraccion, limitaciones fisicas, logicas, movilidad
+%% no gps, priorizacion, alertas, nodos heterogeneos
+
+\input{mineria}
+\input{requerimientos}
+\begin{comment}
+\newpage
+
+\part*{Taxonomía de Protocolos para DTN}
+
+\newpage
+\begin{landscape}
+\input{protocolos/taxonomia}
+\end{landscape}
+\newpage
+ A continuación se presenta una taxonomía para algunos protocolos de DTN representativos, cubriendo una gran porción de las estrategias utilizadas en estas redes. Todos los protocolos buscan maximizar la probabilidad de entrega, para lo cual utilizan diferentes datos para estimar los vínculos que existirán y la posibilidad de utilizarlos en la entrega de mensajes. 
+ 
+\section{Replicativos}
+Se realizan copias de los mensajes para entregarlos a otros nodos, que se enrutan al mismo tiempo hacia el mismo destino. El número de copias puede ser fijo, mediante configuración del protocolo, o bien entrenarse según avance la transmisión de datos.
+
+Las copias generadas pueden ser o bien \emph{controladas}, donde el protocolo genera una candidad acotada de copias, buscando aumentar la probabilidad de entrega sin saturar la red de mensajes idénticos; o bien \emph{ilimitadas}, donde se realizan nuevas copias siempre que resulte conveniente, sin tomar en consideración el número actual de copias.
+
+\subsection{Replicativo controlado}
+Dentro de las copias controladas, existe una diversidad de mecanismos para definir cómo controlar estas copias tomando en cuenta distinta información del entorno. Esta información en general toma en cuenta la historia de encuentros entre nodos ---surgiendo a la vez el problema de cómo obtener o estimar esta información--- buscando maximizar la probabilidad de entrega con ello. 
+
+\input{protocolos/sprayandwait}
+
+\input{protocolos/sprayandfocus}
+
+\input{protocolos/scar}
+
+\input{protocolos/crhc}
+
+\input{protocolos/prophet}
+
+\input{protocolos/plankton}
+
+\subsection{Replicativo ilimitado}
+
+En las copias ilimitadas tendremos que, exceptuando el esquema más simple que copia siempre, existe una decisión de cuándo entregar copias, recibiendo un nodo una copia cuando éste pueda aumentar la probabilidad de entrega del mensaje. Algunos protocolos consideran también \emph{fairness}
+en el envío de mensajes para no sobrepoblar la red con algunos mensajes, disminuyendo la probabilidad de otros de ser duplicados y recibidos.
+
+\input{protocolos/epidemic}
+
+\input{protocolos/maxprop}
+
+\input{protocolos/rapid}
+
+
+ \section{Forwarding} 
+ Los mensajes son entregados a otro nodo cuando es considerado un mejor candidato para llegar al destinatario que el nodo actual. Dentro de esta categoría, destacaremos dos por tomar información de encuentro o evaluaciones sociales de cómo se comportan los nodos. Cabe mencionar que existen otras estrategias, como las de Geolocalización, pero que no consideraremos por resultar inviables en un contexto minero.
+ 
+  \subsection{Historia de Encuentros}
+  Se utiliza la información de los encuentros entre nodos para determinar cuáles tienen mejores probabilidades de entregar un mensaje a un cierto nodo de destino. Esta historia puede ser local ---que un nodo sólo recuerde sus propios contactos--- o global ---que se transfiera la información de todos los nodos a cada nodo. Aunque lo segundo es más preciso para cualquier estimación, es también más difícil y más costoso.
+  
+\input{protocolos/per}
+
+\input{protocolos/smart}
+ 
+  \subsection{Información social}
+  Se toma como hipótesis que los nodos de la red presentan ciertos patrones de comportamiento que influyen en su movilidad y sus contactos, por lo que se utiliza esta información para definir los roles de los nodos en la red desde una perspectiva social. Este tipo de estrategias requiere un conocimiento mayor de la topología donde se aplicará, puesto que su enrutamiento depende fuertemente de una correcta inferencia del contexto.
+
+\input{protocolos/solar}
+
+\input{protocolos/bubble}
+
+\newpage
+\part*{Patrones de movilidad en DTNs}
+
+\input{movilidad/intro}
+
+\input{movilidad/RMM}
+
+\input{movilidad/MCM}
+
+\input{movilidad/SMM}
+
+\newpage
+\part*{Modelo de movilidad en minas subterráneas}
+
+\input{movilidad/disaster}
+
+\end{comment}
+\input{movilidad/mining}
+\newpage
+\part*{Conectividad en entornos mineros}
+
+%%\input{mineria}
+
+\newpage
+\part{Propuesta de protocolo}
+
+Como parte de este trabajo se propone la creación de un nuevo protocolo basado en MaxProp, pero que utilice distintas estimaciones de la probabilidad de ver un nodo. Sea la probabilidad de un nodo $v$ de encontrar un nodo $u$ definida como $p_{v,u}$. En MaxProp, vemos que $p_{v,u}$ comienza como cero, disminuyendo a la mitad cuando $v$ encuentra a otro nodo que no sea $u$, y aumentando en $\frac{1+p_{v,u}}{2}$ cuando lo encuentra.
+
+Se propone modificar esta probabilidad para incorporar un mayor conocimiento de la topología y de las probabilidades de encuentro, incorporando un sistema de jerarquización de prioridad entre distintos nodos, ya que estos serán fijos dentro de nuestro sistema. La 
+
+
+TODO:
+- pruebas en escenario de desastre con maxprop y algun otro. ver que no sea tan bueno (?)
+- agregar que se puede usar info de la manera de desenvolverse para mejorar el algoritmo y bajar el overhead - incorporar ideas de hub de solar
+- incorporar weak/strong links de plankton
+- i.e. cambiar la estimación de enlace de maxprop por una mixta entre plankton y algo optimizado para una mina (??)
+- 
+
+\newpage
+\bibliographystyle{plain}
+\bibliography{comp.bib}
+
+\end{document}

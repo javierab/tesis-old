@@ -1,0 +1,10 @@
+%jerárquico, spray, replicación, tipo spray and focus
+\subsubsection{CRHC}
+
+CRHC\cite{crhc} busca establecer una jerarquía según las propiedades de los nodos. Primero, asume que existen algunos nodos cuya trayectoria es predecible y su capacidad de entrega es estable, los cuales llama Nodos Estables (\emph{steady}), que componen una Red Estable. Los otros nodos se unen a esta red de manera estocástica para enviar o recibir mensajes, conformando una Red Temporal.
+
+La red completa es separada en \emph{clusters}, donde se selecciona un nodo Cabecera del cluster (que llamaremos CH por sus siglas en inglés), que además de conocer su propia subred, conoce a los otros CHs. Así, el protocolo se separa en dos caminos según dónde desee enviar un mensaje.
+
+Si un nodo $S$ quiere enviar un mensaje $M$ a $D$, se lo envía a su CH $CH_S$, quien verifica si debe enrutar dentro o fuera del cluster. Si $D$ está adentro, se realiza un spray binario dentro del cluster para llegar a él, quién notifica la recepción del mensaje a $CH_S$. Si $D$ está afuera, se envían los datos utilizando la Red Estable, buscando encontrar al nodo $D$ o a $CH_D$ quien puede enviar directamente a $D$. Para esto se utilizan nodos intermedios $V_i$ que enviarán a sus propios $CH_{V_i}$, que continuarán el enrutamiento hasta llegar al destino. Al llegar a $CH_D$, éste realiza un enrutamiento interno para llegar a $D$. Al recibirlo, $D$ notifica a $CH_D$ de su recepción.
+
+Este algoritmo funciona muy bien cuando el patrón de movimiento de los nodos es efectivamente de clusters, funcionando mejor que SMART --- con mayor tasa de entrega y menor delay --- puesto que no requerimos encontrar nodos \emph{compañeros}, si no simplemente utilizar los nodos estables. Aún así CRHC requiere mantener mucha información de los nodos de la red, lo cual no siempre es posible y requiere mayor inteligencia para calcular, esparcir y almacenar esta información.

@@ -1,0 +1,21 @@
+\section{Modelos de Movilidad Social}
+
+\subsection{Community-Based Mobility Model}
+
+El modelo basado en comunidad es el primero en tomar en cuenta una red social. En CMM, los nodos se agrupan como amigos pertenecientes a la misma comunidad, y no-amigos que están en otras comunidades. Al principio, el área de movimiento se divide en regiones como una grilla, y cada comunidad es asignada a una celda de la grilla. Los nodos se mueven entre comuniades basado en un factor de atracción de nodos, lo que puede generar una segregación en el comportamiento de éstos. Algunas variantes incluyen relaciones entre comunidades distintas de la propia, donde la probabilidad de que un nodo se mueva de su comunidad a otra es proporcional a la amistad con los nodos de aquella comunidad.
+
+\subsection{Time-Variant Community Model}
+
+En este modelo, el plano de simulación se divide en territorios asignados a cada comunidad. Cada nodo es asignado una velocidad global, y viaja entre comunidades usando probabilidades de transición siguiendo una Cadena de Markov. Esta configuración de comunidades y probabilidades de transición se mantienen fijas por un cierto período de tiempo, que luego cambian. Cada nodo puede poseer distintas configuraciones, capturando los sesgos que puedan existir en las preferencias de éstos. Esta estrategia logra dar más realismo al modelo, y logra aproximarse a trazas reales con una selección apropiada de parámetros.
+
+\subsection{Working Day Mobility Model}
+ 
+Este modelo refleja un patrón de movilidad más real al considerar tres actividades realizadas por los humanos: dormir en casa, trabajar en una oficina y salir con amigos en las tardes. Distintos sub-modelos se pueden utilizar en cada una de estas actividades. Los nodos hacen transiciones entre los tres modelos según el tipo de nodo y la hora del día. Además, el modelo cuenta con diferentes modelos de transporte, ya que pueden caminar, conducir o viajar en bus entre los distintos sub-modelos, y pueden moverse aislados o en grupo. Al ocurrir a diferentes velocidades se aumenta la heterogeneidad de los nodos. El concepto social de WDM no es capturado en modelos simples como RWP, y se observa que el tiempo inter-contacto y la distribución de tiempo de contacto son similares a trazas del mundo real.
+
+\subsection{General Social Mobility Model}
+
+GeSoMo es un modelo de movilidad social que separa un modelo central de una explicación estructural de la red social en la simulación. Este diseño permite a GeSoMo generalizar ampliamente, aceptando redes sociales como input. Basado en esto, GeSoMo genera una traza organizada por el movimiento de cada nodo individual. Esta traza genera encuentros entre nodos acorde a su relación social considerado atracción y repulsión de nodos, y atracción de ubicaciones. Esta estructura permite cambiar la interacción social sin cambiar GeSoMo. Sus resultados de movilidad son coherentes con datos empíricos que describen comportamiento y movimiento social del mundo real.
+
+\subsection{Disaster Scenario}
+
+El escenario de desastres pretende simular la movilidad experimentada en el rescate posterior a una emergencia. Considera un conjunto de sub áreas independientes y disjuntas que representan .............. Así, el escenario consiste en un área de simulación, un conjunto de sub-áreas, y un conjunto de obstáculos que limitan la movilidad. 

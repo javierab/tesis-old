@@ -1,0 +1,25 @@
+\part*{Requerimientos}
+Antes de comparar protocolos, resulta interesante analizar cuáles son las hipótesis de la red sobre la que queremos trabajar.
+Primero, consideraremos que existen dos tipos de tráfico:
+
+\begin{enumerate}
+    \item Alarmas, sensibles al delay y de alta prioridad, pero de volumen pequeño
+    \item Monitoreo, tolerante al delay y de baja prioridad, pero de gran volumen.
+\end{enumerate}
+
+Nuestra prioridad consiste, primero, en entregar una solución del menor delay y mayor tasa de recepción de paquetes al primer caso, y hacer el mejor esfuerzo para el segundo. 
+
+Una hipótesis de las DTN es que no se conoce la topología y evolución de la red, por lo que sólo podemos intentar predecir las mejores rutas y esperar que eventualmente existan. En nuestro formato, tendremos un pequeño conocimiento de la red, dado por los roles específicos que juegan los operarios en las minas, a pesar de las distintas topologías que éstas tengan. A continuación se listan algunas hipótesis que repercutirán en la decisión de enrutamiento:
+
+\begin{enumerate}
+    \item Existen distintas categorías de operarios, puesto que cada uno tiene una labor específica en la mina.
+    \item Los operarios se mantienen durante su jornada en una zona acotada a su rubro específico. Estas zonas pueden ser muy grandes, sobre todo si trabaja con equipo móvil como camionetas o camiones.
+    \item Existen supervisores que viajan entre las distintas zonas para verificar las operaciones, convirtiéndose en nodos que unen áreas posiblemente desconectadas.
+    \item Existen diversos equipos que pueden utilizarse para mejorar la entrega de mensajes: camiones, grúas y camionetas se desplazan de manera constante a través de las minas, tanto de rajo abierto como subterráneas. También existe maquinaria específica de las áreas, que puede utilizarse como almacenamiento y fuetne de energía, pero cuya conectividad es limitada. 
+    \item Diariamente los operarios deben pasar por zonas específicas como los casinos, donde se puede garantizar que entre cualquier par de operarios de la misma categoría existirá un camino, pero usarlo para enrutar puede aportar mucho delay (horas).
+\end{enumerate}
+
+Estos factores nos permiten inferir algunos datos del movimiento esperados y de la evolución de la topología de la red, lo cual se debe considerar a la hora de realizar simulaciones y, en particular, de definir los patrones de movimiento para los distintos nodos, los cuales afectan directamente el desempeño de los protocolos.
+
+Primero, se espera que los operarios que \emph{conectan} distintas áreas, a saber, supervisores y operarios sobre equipo móvil, sean nodos de mayor prioridad en enrutamiento hacia otras áreas, al tener una mayor probabilidad de viajar entre ellas.
+También, se cuenta con un peor caso para el monitoreo donde los datos se descarguen al final del día. Esto puede no ser factible si la duración de la batería y almacenamiento no es suficiente para los datos de todo el día.

@@ -1,0 +1,261 @@
+\documentclass[10pt,preprint,onecolumn]{paper}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{mathtools, comment, url, hyperref}
+\usepackage[cm]{fullpage}
+\usepackage{setspace}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage[pdftex]{graphicx}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{subcaption}
+\floatstyle{boxed}
+\restylefloat{figure}
+\singlespacing
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+
+
+\begin{document}
+
+\begin{titlepage}
+\begin{center}
+
+
+\textsc{\LARGE Universidad de Chile}\\[1.5cm]
+
+\textsc{\Large Propuesta de Tesis}\\[0.5cm]
+
+% Title
+\HRule \\[0.4cm]
+{ \huge \bfseries Enrutamiento priorizado en redes inalámbricas de sensores para topologías parcialmente conectadas \\[0.4cm] }
+
+\HRule \\[1.5cm]
+
+% Author and supervisor
+\begin{minipage}{0.4\textwidth}
+\begin{flushleft} \large
+\vspace{3cm}
+\emph{Autor:}\\
+Javiera Born
+\end{flushleft}
+\end{minipage}
+\begin{minipage}{0.4\textwidth}
+\begin{flushright} \large
+\vspace{3cm}
+\emph{Supervisor:} \\
+José Miguel Piquer \\
+Sandra Céspedes
+\end{flushright}
+\end{minipage}
+
+\vfill
+
+% Bottom of the page
+{\large \today}
+
+\end{center}
+\end{titlepage}
+
+
+\begin{abstract}
+% Debe indicar claramente los principales puntos que se abordarán: objetivos, metodología y resultados (teóricos, prácticos, software) que se espera obtener.
+
+
+\end{abstract}
+
+Las redes inalámbricas, desde su masificación en los '90, han revolucionado la forma de concebir la comunicación. Dentro de éstas, las Redes Móviles de Sensores han surgido como una de las tecnologías con más proyección de aplicaciones, desde seguridad hasta aplicaciones de salud que permitan mejores respuestas ante emergencias. Estos conceptos se pueden aplicar a industrias de grandes volúmenes, donde es posible utilizar sensores para determinar los estados de personas que normalmente estarían aisladas, y poder avisar en caso de que algún parámetro aparezca fuera de lo normal. 
+
+Esta propuesta busca determinar cómo conjugar una recolección constante de datos de sensores con un sistema de priorización de mensajes para alertas en topologías intermitentemente conectadas ---debido, en general, a su gran tamaño, y a infraestructuras de red insuficientes.
+
+Para lograr esto, se propone explorar los algoritmos de enrutamiento más utilizados y su posible aplicación sobre un modelo de movimiento de acuerdo a roles, inspirado en la industria minera, donde se cuenta con operarios y distintos supervisores. Para ello se explora la línea más popular de Redes de Sensores, destacando el enrutamiento Oportunista\cite{op} y Epidémico\cite{epidemic}, y otras estrategias pensadas para sobrellevar la conexión intermitente.  Además, se busca optimizar el consumo energético y el volumen de datos recolectados, con el fin de permitir la mayor autonomía posible a los sensores. Finalmente, se pretende probar una implementación real del resultado modelado y simulado para obtener una validación de éste.
+
+\clearpage
+
+\begin{comment}
+@keywords{Wireless Sensor Network, Ad-Hoc Networking, Delay Tolerant Network, Data Mules}
+\end{comment}
+
+
+\part{Propuesta de Tesis}
+\section{Introducción}
+\label{sec:introduction}
+
+%que bonitos los sensores
+La búsqueda de aplicaciones tecnológicas que permitan mejorar la calidad de vida de las personas ha sido incesante, y ha tomado especial fuerza en la última década gracias a la portabilidad del hardware y la facilidad de conexión con la que contamos, creando aplicaciones que han revolucionado la vida de las personas. Aunque inicialmente los sensores tenían mayores usos en domótica y sistemas de seguridad, hoy en día es posible utilizarlos sobre personas, tomando datos y utilizándolos para mejorar su calidad de vida, permitiendo optimizar tiempos y espacios o brindando mayor seguridad. 
+
+El uso de sensores tiene un gran potencial que se ha estado explotando en los últimos años, destacando iniciativas para mejorar la seguridad de trabajadores en industrias o actividades de alto riesgo, como bomberos o mineros; en estos campos, los sensores permiten obtener mayor información de las situaciones a las que se está expuesto, y permiten un mejor manejo de emergencias. 
+
+%sensores móviles, qué y cómo son.
+Una línea de investigación aplicada que ha cobrado fuerza en los últimos años es la de \emph{Redes Móviles de Sensores}, que es un tipo de red descentralizada que no depende de una infraestructura preexistente, como \emph{routers} o puntos de acceso, sino que cada nodo participa en el envío de los datos reenviándolos a sus nodos vecinos para llegar a puntos objetivos donde se acumulan y procesan estos datos. El problema es que este tipo de redes depende tremendamente de su topología para brindar garantías de funcionamiento. Por ello, han surgido diversas ramas de estudio, donde se han propuesto algoritmos orientados a distintas aplicaciones. 
+
+Este trabajo busca reunir estrategias existentes para generar un algoritmo que permita el enrutamiento en redes donde existen desconexiones entre sus nodos. En particular, deseamos enrutar un gran volumen de datos recolectados por sensores sobre personas en redes donde existe disrupción de la conexión, es decir, donde la movilidad genera que no existan en todo momento caminos entre dos nodos cualesquiera. Este tipo de red induce una tolerancia al \emph{delay}, pues, si no existe un camino, no queda otra opción que esperar que el movimiento de los nodos lo genere.
+
+Dado el ambiente industrial que se pretende modelar; no se considerará que los nodos se mueven aleatoriamente por el espacio, sino que representan operarios con labores definidas. Por simplificación, e inspirados en la industria minera, se considerarán cuatro roles definidos: personas cuyo trabajo las mantiene relativamente aisladas, personas que se mueven en zonas pequeñas en torno a aquellos aislados, personas que supervisan localmente las zonas donde se encuentran los primeros, y personas que supervisan globalmente a los supervisores locales. La selección de estos roles no es arbitraria, puesto que es común encontrar en la industria estructuras donde existen cargos globales y locales. 
+
+Considerando que los nodos estarán sobre las personas, cuyos turnos de trabajo pueden durar hasta 12 horas, es importante considerar no sólo la eficiencia energética, si no también la posibilidad de almacenamiento de los sensores. Dado que muchos trabajos son acompañados de maquinarias, se buscará considerar su participación entre las personas, como nodos que no generan mediciones, pero que pueden recolectar datos ajenos al tener menos limitaciones que los operarios.
+
+\section{Antecedentes}
+
+A continuación, se presentan los conceptos necesarios y el estado del arte que servirá de antecedente para el desarrollo de la presente tesis.
+
+\subsection{Redes Móviles Ad Hoc}
+\label{sec:manet}
+El paradigma de las redes móviles Ad Hoc surgió en los '90, con la popularización de los dispositivos inalámbricos que permitieron la conexión directa entre usuarios, destacando los protocolos Bluetooth (IEEE 802.15) y WLAN (IEEE 802.11). Este tipo de dispositivos popularizó la conexión \emph{single-hop}, o de un salto, donde la conexión se establece entre dos nodos en el rango de conexión posible, sin requerir ninguna infraestructura de red.
+
+Para expandir la posibilidad de comunicarse con cualquier nodo en una red, aún sin requerir una infraestructura, se propuso el concepto de las redes móviles ad hoc, o MANETs, que consideran un paradigma de múltiples saltos (\emph{multi-hop}) en la comunicación con los vecinos, aumentando así el rango de conectividad, y haciendo que los nodos no sólo intercambiaran sus propios datos, si no que tomaran parte en el tráfico de otros nodos que no podrían comunicarse directamente.
+
+Al comienzo de su desarrollo, las MANETs fueron vistas como un innovador pradigma con potencial para ser la base para construir redes inalámbricas, y por ello se hicieron muchos esfuerzos para potenciar su investigación~\cite{manetchal2} y direccionar su desarrollo~\cite{manetchal1}. Pero los desarrollos hechos pretendieron ser demasiado generales, buscando ser \emph{pure general purpose}, es decir, sin infraestructura y sin una autoridad a cargo de manejar o ajustar la red, y sin ninguna aplicación específica en mente~\cite{multi}.
+
+El desarrollo comenzó con el enrutamiento en la capa de IP desarrollando procolos estándar, pero no se encontró ninguno superior a otro en todos los contextos. Rápidamente, se vio que esto era insuficiente, ya que utilizar UDP, TCP o adaptaciones de éstos sobre MANETs no funcionaba apropiadamente~\cite{manetchal1}. Esto generó que varios autores comenzaran a investigar \emph{middle-ware} y potenciales aplicaciones, pues no era claro dónde resultaría útil tener una MANET de propósito general. La falta de atención en las aplicaciones llevó a que, tras una década de trabajo, se hubiesen producido resultados teóricos profundos \cite{teo1, teo2} y nuevas arquitecturas multi-capa~\cite{multi}, pero prácticamente ninguna implementación en el mundo real, pues un paradigma MANET de propósito general no presenta muchas capabilidades ni despierta interés en la industria o entre usuarios. 
+
+A partir del paradigma de las MANETs, surgen nuevos paradigmas ad hoc multihop, que optaron por alejarse del desarrollo de propósito general y se enfocaron en las aplicaciones particulares. Esto contribuyó a su éxito, pues lograron reducir la complejidad al apuntar a aplicaciones particulares, enfocar el desarrollo en aquello relevante para construir estas redes, y el uso de simulaciones realistas y pruebas con usuarios para validar sus hipótesis, logrando así un enfoque mucho más pragmático. En particular, será de nuestro interés revisar el área de Redes de Sensores y las Redes Oportunistas, que serán una pieza fundamental en este trabajo.
+
+\subsubsection{Redes Inalámbricas de Sensores}
+Las redes inalámbricas de sensores (WSN, por su sigla en inglés) representa una clase especial de redes ad hoc que buscan controlar y monitorear eventos. Éstas son desarrolladas y configuradas para aplicaciones específicas, con casos exitosos reconocidos en agricultura~\cite{agric} y monitoreo de estructuras~\cite{struct}. En una red de sensores, se busca que los nodos tomen datos, se comuniquen entre sí y transmitan la información recolectada a un nodo sumidero, donde eventualmente llegan a Internet.
+
+El desarrollo de estas redes ha sido enorme, siendo ahora un área consolidada. Aun así, la dependencia de las aplicaciones obliga a re-pensar todo el sistema al cambiar un escenario. Los protocolos de enrutamiento existentes se pueden agrupar de distintas maneras, destacando dos~\cite{survey2}:
+
+\begin{itemize}
+\item \textbf{Basada en la estructura de la red:} Estos protocolos se catalogan también en tres tipos. Primero, está el enrutamiento de \emph{Comunicación Directa}, donde los nodos envían los datos directamente al sumidero. Este tipo de red consume mucha energía, y genera un gran número de colisiones, por lo que es poco usada. Segundo, está el enrutamiento \emph{Flat Based}, que asigna a todos los nodos la misma funcionalidad. Resulta muy eficiente para redes pequeñas. Finalmente, está en enrutamiento \emph{Jerárquico}, que particiona los nodos en distintos \emph{clusters}, donde las responsabilidades para los nodos de cada cluster pueden ser distintas. Esto se explorará con mayor profundidad en ~\ref{sec:hier}
+
+\item \textbf{Basada en el estado de la información:} Esta categorización depende del conocimiento o las suposiciones que cada nodo pueda tener de la topología de la red, teniendo por una parte el enrutamiento \emph{proactivo}, donde los nodos tienen pre-computadas las rutas, o \emph{reactivo}, donde sólo buscarán una ruta en caso de necesitarla. En el caso de los sensores móviles, resulta impráctico tener un enrutamiento proactivo, pues las mejores rutas no son constantes. Existen también caminos mixtos, los cuales son deseables en nuestro caso, que envían actualizaciones al servidor constantemente para mantener una tabla de ruta relativamente actualizada en cada nodo.
+
+\end{itemize}
+\subsection{Enrutamiento Oportunistas}
+\label{sec:op}
+El enrutamiento oportunista es una estrategia basada en el uso de \emph{broadcast} para aumentar el número de potenciales reenviadores que puedan cooperar en el envío de los paquetes. Estos algoritmos requieren coordinación entre los nodos para balancear la duplicación de la transmisión manteniendo garantías de recepción de los mensajes. Además, es importante considerar que los nodos tienen \emph{buffers} acotados donde almacenar mensajes tanto propios como ajenos, por lo que resulta necesario considerar este hecho para no bombardear todos los nodos con mensajes, a la vez de avisarles si el mensaje ya llegó a destino para que puedan eliminarlos de su buffer.
+Los algoritmos oportunistas de enrutamiento siguen, generalmente, las siguientes fases secuencialmente:
+\begin{itemize}
+\item Selección de Candidatos: El emisor selecciona un conjunto de nodos que pueden permitir la transmisión del paquete desde el origen al destino. Este conjunto se conoce como los \emph{candidatos de reenvío}. El emisor entonces informa a sus candidatos del conjunto seleccionado.
+
+\item Asignación de prioridad de candidatos: Cuando el emisor informa acerca de sus candidatos, los ordena según la conveniencia de tenerlos en el conjunto basada en alguna métrica, como la probabilidad de pérdida, que debe ser periódicamente medida. 
+
+\item Transmisión de datos: El protocolo envía los datos a su conjunto de candidatos usando \emph{broadcast}. Algunos algoritmos envían los datos como \emph{unicast}, especificando el mejor nodo de reenvío el siguiente salto. 
+
+\item Coordinación del receptor: Sólo uno de los nodos de los candidatos debería continuar con el envío del paquete, y para ello el nodo elegido será responsable de confirmar la recepción de los datos. La elección del nodo ocurre incorporando un procedimiento distribuido en los nodos, buscando que el nodo de reenvío sea aquel con mejor prioridad de aquellos que recibieron el mensaje. Esto se hace a nivel de MAC, por lo que existen propuestas de modificaciones en los campos para llegar a este acuerdo \cite{mac}
+\end{itemize}
+
+Aunque esta secuencia normalmente se sigue, algunas propuestas no implementan estas fases. Por ejemplo \cite{op} propone que cada nodo decida si ser candidato, realizando la priorización entre los nodos y no en el emisor. Cabe notar que este tipo de algoritmos ha sido ampliamente estudiado, existiendo una gran familia de propuestas que han sido probadas en diversos ambientes, incluyendo Redes de Sensores sobre personas\cite{lv1}.
+
+Una propuesta interesante es la de \textbf{enrutamiento epidémico}\cite{epidemic}, donde los nodos inundan la red continuamente replicando y transmitiendo los mensajes a todos los nodos con los que entre en contacto que no posea una copia del mensaje. Aunque existen distintas variantes, este algoritmo resulta muy ineficiente si existe una gran cantidad de datos, saturando en todos los sentidos la red y los nodos, pero permite maximizar la probabilidad de que el mensaje llegue del emisor al receptor. Para el sistema de priorización de mensajes, este protocolo resulta llamativo, pues el volumen de mensajes prioritarios debería ser muy pequeño, y resulta deseable comunicar a todos los vecinos de la alerta emitida por un nodo.
+
+\subsection{Tolerancia al \emph{Delay}}
+\label{sec:delay}
+
+Una clase de redes que define un nuevo paradigma son las Redes Tolerantes al Delay (DTN por sus siglas en inglés), también llamadas \emph{Challenged Networks}\cite{challenged}. Algunos desafíos únicos surgen cuando cambiamos las hipótesis de las redes basadas en TCP/IP: debe existir un camino \emph{end-to-end} entre el origen y el destino, y el \emph{Round Trip Time} debe ser suficientemente pequeño para que pueda establecerse una conversación. Estas hipótesis dejan de ser válidas en las DTN: la conectividad intermitente hace imposible garantizar un camino entre origen y destino para una transmisión de datos, y el gran delay hace imposible generar \emph{ACKs} y retransmisiones como en TCP/IP. La arquitectura DTN está diseñada para proveer comunicación asíncrona en redes dadas a frecuentes desconexiones, delays largos y variables, y ancho de banda limitado. Además, los dispositivos de una DTN pueden tener limitaciones de almacenamiento y poder. 
+
+Existe una gran cantidad de protocolos de enrutamiento para las DTN, que se pueden categorizar en dos\cite{surveydtn}:
+
+\subsubsection{Enrutamiento Determinista}
+
+La base del enrutamiento determinista es considerar que el movimiento, y por tanto las futuras conexiones de los nodos, es completamente conocido. Un sistema importante fue el tutorial de Ferreira\cite{graphs}, donde formaliza un modelo que captura la evolución de grafos. Modelar el tiempo permite predecir el tiempo más corto para llegar a destino, o el camino con menor número de saltos.
+Los algoritmos que se proponen en las DTN dependen de la información que se conozca de la topología de la red y de la demanda\cite{16}. Dado que en nuestro problema surgen factores aleatorios, este tipo de enrutamiento no nos será de mayor utilidad, puesto que no conocemos la evolución de la topología, lo cual conduciría a un mal rendimiento.
+
+\subsubsection{Enrutamiento Estocástico}
+
+El enrutamiento estocástico se utiliza cuando el comportamiento de la red es aleatorio y no se conoce. Estos protocolos dependen del momento en que se envían los paquetes: la decisión más fácil es enviar a todos los contactos en el rango.
+Como se mencionó en \ref{sec:op}, la decisión más simple es enviar los paquetes a todos los nodos con los que entre en contacto.
+
+\begin{enumerate}
+\item \textbf{Enrutamiento Epidémico}
+
+Como se vio, la manera más simple de lidiar con una topología desconocida y patrones de movimiento no determinados es utilizar un comportamiento epidémico.
+
+En \cite{epidemic} se propone un protocolo de enrutamiento epidémico para redes intermitentemente conectadas: cuando un mensaje llega a un nodo intermediario, el nodo inunda a todos sus vecinos con éste. Así los mensajes son rápidamente distribuidos por las secciones conexas de la red. La simulación que ellos realizaron muestra que así se puede llegar a despachar prácticamente todos los mensajes transmitidos.
+
+Pero también existen estrategias más conservadoras. Dependiendo de las suposiciones de movimiento de los nodos ---como por ejemplo, asumir que todo nodo se cruza con otro en un tiempo determinado--- es posible establecer protocolos de una cantidad de saltos acotado, como es el caso de \cite{teo2}, donde sólo se ejecutan dos saltos. Esto puede funcionar en modelos donde el almacenamiento se considere infinito, pero una cantidad grande de nodos, con alto delay y sin conocer la evolución de la topología puede resultar en una suposición demasiado fuerte que provoque pérdidas de una gran cantidad de paquetes.
+
+Un protocolo interesante es el de Spraying \cite{24}, que restringe el envío del paquete a la vecindad de la última ubicación conocida del destinatario. Esto por supuesto implica mantener datos de la ubicación de los nodos.
+
+\item \textbf{Enrutamiento por estimación del enlace}
+
+En vez de enviar ciegamente los paquetes a todos (o algunos) de los vecinos, los nodos intermedios pueden intentar estimar la probabilidad de eventualmente llegar a destino para cada enlace. Basada en esta estimación, los nodos pueden decidir si guardar el paquete y esperar, o enviarlo a algún otro nodo para que lo reenvíe. \cite{49} es un trabajo teórico que provee en la estimación del enlace. Algunos protocolos hacen estimaciones basadas sólo en la información  del siguiente salto\cite{26}, mientras otros guardan métricas \emph{end-to-end}, tal como el camino más corto esperado o el delay promedio.
+
+Todo ahorro en el envío de los datos se contrapesa con la necesidad de tener información de la red, sea tanto un modelo \emph{a priori} del movimiento de los nodos, como el destinar un espacio en el nodo para guardar datos de los otros nodos para poder realizar estimaciones que permitan enviar los datos por buenos caminos. 
+\end{enumerate}
+
+\subsubsection{Data Mules}
+\label{sec:mules}
+
+La recolección de datos en el contexto de las DTN puede resultar más eficiente utilizando \emph{Data Mules}, es decir, nodos móviles que llevan datos desde los sensores hasta la infraestructura de red~\cite{datamule1}. Dependiendo de la aplicación, las \emph{mulas} pueden ser parte del ambiente externo~\cite{mulemob}, como por ejemplo en autos que pasan, o parte de la infraestructura de red~\cite{int1}, como por ejemplo en un robot que recorre distintas zonas. Estos dispositivos visitan los nodos según algún patrón de movilidad, recogen los datos, y los llevan a un punto de acceso.
+Existe amplio desarrollo tanto en las mulas en sí~\cite{mule1}, como en los esquemas y algoritmos involucrados incluyendo la transferencia de datos~\cite{mulestopwait, mulewindow}, el patrón de movilidad~\cite{mulemob} y la pérdida de mensajes~\cite{muleloss}.
+
+Un caso notable de esta estrategia es el de ZebraNet\cite{11}, donde sensores inalámbricos se pusieron en cuellos de cebras en África recogiendo datos de ubicación, y reportando oportunisticamente sus datos cuando entraban en el rango de las estaciones base. Adicionalmente, se incorporaron \emph{Data Mules} consistentes en nodos voladores para recolectar datos. 
+
+Se tiene, finalmente, que cualquier estrategia utilizada requerirá un balance dado por los datos que se puedan obtener o inferir de la red, mientras que mayor desinformación requiere más inundación de datos, generando un mayor consumo en energía y almacenamiento.
+
+
+\subsection{Enrutamiento jerárquico}
+\label{sec:hier}
+
+Una jerarquía es creada cuando un subconjunto de los nodos tiene más responsabilidades que otros nodos en la red. En el enrutamiento jerárquico, algunos nodos toman el rol pasivo de escuchar el tráfico, mientras otros toman roles activos distribuyendo el tráfico, manejando a sus vecinos, etc \cite{51}. En vez de transmitir los datos directamente a un sumidero, todos los nodos transmiten sus datos a ciertos nodos denominados \emph{cabezas} de su conjunto, también llamados \emph{agregadores}\cite{105}. Este nodo recibe los datos y elimina información redundante, reduciendo así el consumo energético. También logra mejorar la complejidad de la red dada la estructura que toma. 
+
+Una propuesta es la jerarquía plana, donde los nodos cooperan entre sí para entregar ciertos paquetes. Otra jerarquía es de \emph{cluster}, donde los nodos se organizan en zonas, teniendo que cada zona cuenta con una cabeza, y un conjunto de cabeza conforman una supra-cabeza, haciendo así que el enrutamiento entre zonas esté controlado. Esto tiene la ventaja de controlar el tráfico, pero puede generar un cuello de botella en los nodos cabeza\cite{62}.
+
+Algunas de las tareas que pueden tomar los nodos son las de recolectar datos, mantener la tabla de ruta, y procesar datos. \cite{130} propone dividir esas tres tareas en distintos nodos. Esto es una buena idea para redes normales, pero en nuestro caso, donde tendremos desconexiones, puede ser limitante si no existe un balance entre las tres funcionalidades de los nodos.
+
+Dado que en nuestro caso tenemos roles bien definidos, podemos guiar nuestro enrutamiento por el modelo de movimiento de los nodos, intentando resolver los problemas de navegación para los elementos móviles. Una estrategia es la propuesta en \cite{110}, donde los nodos reportan su movimiento, logrando así mantener una tabla de localización de los nodos que logra mejorar el desempeño de la red. Otro protocolo interesante es el de \cite{117}, que se basa en la cooperación de los nodos, tal que si un nodo escucha un mensaje de A a B, y uno de B a A, sabe que él se encuentra en el medio del camino, y por tanto se ofrece como nodo intermedio de la comunicación.
+
+\subsection{Simulaciones e hipótesis}
+\label{sec:sim}
+
+Para buscar el balance requerido entre los distintos algoritmos presentados, logrando una propuesta que entregue los mensajes con alta probabilidad pero que no consuma excesiva energía, es necesario realizar una simulación realista del problema propuesto.
+
+Para realizar esto, se propone el uso del simulador The ONE\cite{theone}, que permite el modelamiento de redes oportunistas, y permite incorporar patrones de movimiento en los nodos, definición de zonas, y tasa de generación de mensajes. El desafío se encuentra, entonces, en lograr un modelo que se ajuste a la realidad industrial presentada, donde se cuenta con personas cuyo patrón de movimiento está relativamente acotado según sus roles.
+
+\section{Objetivos de la Tesis}
+
+El objetivo de esta tesis es obtener un algoritmo mixto que provea una solución conjunta al problema de enrutar en una DTN considerando nodos con roles definidos, a la vez que incorpora un sistema de priorización de mensajes para generar alertas. El sistema de alertas, en primera instancia, buscará llegar a los sumideros del sistema, pero se desea también notificar a los vecinos de las alertas que surjan.
+
+Como sub-objetivo, aparece la generación del modelo simulado, donde sea posible realizar pruebas de los algoritmos que se generen en el proceso, para poder descartar aquellos que no califiquen y buscar mejoras. Todo esto debe ser, de todas formas, validado en una ambiente real controlado.
+
+Además del algoritmo, se desea que el sistema sea realmente implementable. Eso requiere considerar los factores de consumo de energía y almacenamiento, por lo que se propone, además de lo ya mencionado; explorar la materia de compresión de datos en los nodos, y buscar como pre-procesar los mensajes para la generación de las alertas a partir de los datos medidos.
+
+\clearpage
+\part{Plan de Trabajo}
+% Debe describir la secuencia de las principales etapas, metas y actividades.
+La investigación propuesta será desarrollada a través de una serie de etapas que generan un artefacto asociado, como evidencia de su completación. Estas etapas son mayoritariamente dependiente unas de otras, por lo que el trabajo será llevado a cabo de manera lineal.
+
+El desarrollo de esta tesis se planifica para durar 11 meses desde la aprobación de la presente propuesta, detallándose a continuación los tiempos estimados para cada etapa.
+
+Se describen tres objetivos globales: primero, la realización del modelo e implementación de los algoritmos de enrutamiento para la simulación del problema; segundo, la incorporación del sistema de priorización de mensajes y de complemento en la recolección de datos; y tercero, la optimización del sistema para poder funcionar en un contexto industrial realista, considerando el volumen de datos y el gasto energético. Se concluye con una experimentación del sistema que, aunque no es en sí un objetivo, es una evaluación importante del sistema desarrollado y su real utilidad.
+
+\begin{enumerate}
+\item Desarrollo de la base del sistema:
+    \begin{enumerate}
+	\item \emph{Simulación del ambiente}: La base de este trabajo está en considerar el movimiento de los nodos en una topología parcialmente desconectada. Por ello, la primera fase consiste en desarrollar un modelo utilizando el simulador The One~\cite{theone}, ampliamente utilizado en el modelamiento de Redes Oportunistas, que logre capturar los distintos roles propuestos y muestre la posibilidades de comunicación en la red de sensores.
+	
+	\item \emph{Implementación de algoritmos sobre el modelo}: A pesar del amplio trabajo en el área de Redes de Sensores, como se mostró en la sección ~\ref{sec:manet}, es necesario buscar las estrategias que se ajusten mejor al problema particular, con énfasis en el uso de enrutamiento jerárquico para los distintos roles. Para ello es necesario probar los algoritmos existentes y realizar los ajustes que permitan su óptimo funcionamiento en términos de tiempo, pérdidas y delay.
+	
+\end{enumerate}
+\item Incorporación de priorización y recolección
+\begin{enumerate}
+
+	\item \emph{Sistema de priorización}: Se debe lograr incorporar un sistema que permita el envío de mensajes prioritarios sobre el algoritmo base de envío de datos, encontrando un buen balance para no saturar al sistema, pero intentando notificar lo antes posible a los nodos vecinos de los mensajes categorizados como prioritarios.
+
+	\item \emph{Recolección de datos}: Como se detalló en la sección ~\ref{sec:delay}, se busca incorporar a la red nodos recolectores de datos, que dependiendo de sus rutas permiten agilizar la descarga de datos desde los sensores.
+	
+	\end{enumerate}
+\item Optimización y experimentación
+    \begin{enumerate}
+    
+	\item \emph{Compresión de datos}: En esta etapa se estudiarán las posibilidades de almacenar los datos ocupando un menor espacio que los mensajes planos, para así disminuir el volumen de datos a enviar. Esto no debiese afectar los algoritmos, pero sí el desempeño global del sistema.
+	
+	\item \emph{Optimización energética}: Dado el uso objetivo de este trabajo en un ambiente industrial, se pretende buscar e implementar estrategias que permitan disminuir el consumo total, para así evitar la desconexión de nodos por causas energéticas, limitando al sistema completo.
+	
+	\item \emph{Experimentación}: Para validar todo el trabajo desarrollado, se pretende realizar una prueba en un ambiente industrial real, donde se registren mediciones de sensores sobre operarios llevando a cabo su trabajo normal. Esto, además de permitir la validación real del modelo y los algoritmos, permite observar falencias a nivel de hardware que pudieran afectar el desempeño del sistema, pudiendo proponerse así requisitos mínimos para el funcionamiento industrial de esta implementación.
+
+		
+\end{enumerate}
+
+\end{enumerate}
+
+
+\clearpage
+
+\bibliographystyle{plain}
+\bibliography{proposal}
+
+\end{document}

@@ -1,0 +1,11 @@
+%orientado a sensores-sink, tipo spray-and-focus con R copias, utility function
+\subsubsection{SCAR}
+El protocolo SCAR\cite{scar}, orientado a sensores de baja independencia energética, busca tomar información del contexto del sensor (como vecinos encontrados o nivel de batería) para prever cuáles nodos son los mejores para llevar los datos. A pesar de realizar varias réplicas, considerando la posible desconexión de uno o más nodos, el número es considerablemente menor que en las estrategias epidémicas. Se toma como hipótesis que el destino es siempre un nodo de un conjunto de sumideros.
+
+Este protocolo calcula constantemente sus cambios en conectividad, posición respecto a sumideros y nivel de batería, los cuales se combinan para calcular localmente la probabilidad de entrega a los sumideros, $P(s_i)$ en cada sensor $s_i$.
+
+Un nodo $A$ sólo transfiere datos a otro $B$ si la probabilidad de entrega de $B$ es mayor que la de $A$, entregando $R$ copias de sus datos a los $R$ nodos con mayor probabilidad de entrega ---donde puede estar él mismo--- marcando la copia de mayor probabilidad como $master$ y el resto como $backup$. Las copias $backup$, al ser sólo una alternativa, pueden ser eliminadas si un nodo requiere liberar espacio de almacenamiento, mientras que $master$ sólo puede borrarse si, al llegar a un sumidero, se le notifica al nodo que el mensaje ya ha sido previamente entregado. Estas $R$ copias, a su vez, pueden ser \emph{forwardeadas} a otros nodos si tienen una mejor probabilidad de entrega, pero no se crean nuevas copias.
+
+Esta estrategia podría generar acumuladores de datos si ciertos nodos tienen una probabilidad muy alta de entrega, pero esto genera un consumo mayor de energía y por ende un menor nivel de batería, lo cual es tomado en consideración en la probabilidad de entrega buscando precisamente evitar ese escenario.
+
+Este protocolo, a pesar de su complejidad, sólo fue comparado en \cite{scar2} con una entrega epidémica \emph{random}, sin resultados notables, concluyendo que le ocurre algo similar a Spray-and-Focus, donde la complejidad del cálculo de la probabilidad de entrega juega en contra de la simpleza de la replicación.

@@ -1,0 +1,13 @@
+%replicacion, probabilista
+\subsubsection{RAPID}
+RAPID\cite{rapid} es un protocolo diseñado para priorizar en el enrutamiento cierta métrica previamente determinada, replicando los paquetes hasta que lleguen a su destinatario. Para esto, se traduce la métrica de enrutamiento en utilidades por paquete, con tal de determinar en cada oportunidad de transferencia si la utilidad marginal de replicar el paquete justifica los recursos utilizados para ello, con la estructura de un algoritmo online.
+
+Para realizar estos cálculos, RAPID utiliza un canal de control para intercambiar información de la red entre nodos, usando sólo una fracción del ancho de banda disponible, pues se sabe que los protocolos que conocen las condiciones de la red funcionan mejor \cite{rapid19}, y que los ACK en replicación mejoran las tasas de entrega, quitando paquetes innecesarios de la red. Los nodos usan este canal para intercambiar \emph{metadata} que incluye el número y ubicación de réplicas de los paquetes, y el tamaño de transferencias anteriores. Aunque esta información es inexacta, mejora bastante su desempeño.
+
+Al funcionar como algoritmo online, la métrica seleccionada debe expresarse como una función de utilidad, por ejemplo, para minimizar el delay promedio de la red se define la utilidad de un paquete como
+$ U_i = -D(i)$,
+dado que el delay esperado del paquete es su contribución a la métrica. El delay, por su parte, se estima considerando el tiempo desde su creación, el tiempo esperado para ser entregado y el número de nodos que poseen réplicas del paquete. Al utilizarse trazas vehiculares ---donde modelar los tiempos de encuentro de buses es difícil ya que cambian de ruta generando ruido--- la estimación del delay consideró una distribución exponencial, es decir, la probabilidad de que $u$ y $v$ se encuentren es
+$$1-e^{-\lambda t}$$
+donde $1/\lambda$ es la duración inter-contacto entre $u$ y $v$, que a su vez debe ser estimada.
+
+En la prueba realizada usando trazas de buses RAPID resultó tener mejores resultados que Spray-and-Wait y PRoPHET con métricas de delay promedio, delay máximo y tasa de entrega. Además, se observa que RAPID tiene un mejor desempeño que MaxProp por su flexibilidad, rapidez y tasa de entrega.
