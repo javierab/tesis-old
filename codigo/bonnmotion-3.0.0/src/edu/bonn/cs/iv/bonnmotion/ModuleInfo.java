@@ -30,7 +30,9 @@ public class ModuleInfo {
     public final static String TOILERS = "Toilers - Colorado School of Mines (http://toilers.mines.edu/)";
 	public final static String UNIVERSITY_OF_BONN = "University of Bonn - Institute of Computer Science 4 (http://net.cs.uni-bonn.de/)";
 	public final static String UOS_SYS = "University of Osnabrueck - Institute of Computer Science (http://cs.uos.de/sys/)";
-    
+	public final static String UNIVERSIDAD_DE_CHILE = "Universidad de Chile- Departamento de Ciencias de la Computación (http://dcc.uchile.cl/)";
+
+	
     public final String name;
     public String description = "";
     public String affiliation = "";
