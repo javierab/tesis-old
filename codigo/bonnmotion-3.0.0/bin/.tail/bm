@@ -1,6 +1,0 @@
-if [ ! -d "${BONNMOTION}/classes" ]; then
-	echo "Compile first ..."
-	exit;
-fi
-
-$JAVA -Xmx512m -Xss10m -server -ea -cp "$CLASSPATH" $PACKAGE.run.BM "$@"
