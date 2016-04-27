@@ -20,14 +20,14 @@
 
 package edu.bonn.cs.iv.bonnmotion.models.mine;
 
+import java.util.Random;
+
 public class Maintenance extends MineArea {
 	private static final long serialVersionUID = -2167557823937697002L;
 
 	public Maintenance(double[] val, double[] entries) {
 		super(val, entries);
-		this.type = 3;
-		makeObstacles();
-		
+		this.type = 2;
 		if (debug) System.out.println ("AreaType: Maintenance");
 	}
 	
@@ -35,9 +35,61 @@ public class Maintenance extends MineArea {
 		//TODO
 	}
 	
+	public int[] RandomArray(int total, int trues){
+		
+		int[] r = new int[total];
+		int i=0;
+		Random ran = new Random();
+		while(i < trues){
+			int x = ran.nextInt(total);
+			if(r[x] == 1){ /*already written*/
+				continue;
+			}
+			else{ /*we add it*/
+				r[x] = 1;
+				i++;
+			}
+		}
+		return r;
+	}
+	
+	
 	protected Obstacle[] makeObstacles(){
-		//TODO
-		return null;
+		
+		double h_step = this.getBounds().height/10.0;
+		double w_step = this.getBounds().width/10.0;
+		
+		/*random number of obstacles: 2-4*/
+		
+		Random ran = new Random();
+		int x = ran.nextInt(3) + 2;
+		//System.out.println(x + " obstáculos");
+		
+		int[] randarr = RandomArray(8, x);
+		System.out.println();
+		Obstacle[] ret = new Obstacle[x];
+		int ret_i = 0;
+		for(int i = 0; i < randarr.length; i++){
+			/*create obstacle*/
+			if(randarr[i]==1){
+				
+				int start = ran.nextInt(6) + 1;
+				int end = ran.nextInt(9-start) + start + 1;
+
+				//System.out.println(i + ", " + randarr[i] + "; start: " + start + ", end:" + end);
+
+				
+				double[] vertices = {
+						i*w_step, start*h_step, 
+						i*w_step, end*h_step, 
+						i*w_step+w_step, end*h_step, 
+						i*w_step+w_step, start*h_step};
+				Obstacle o = new Obstacle(vertices);
+				ret[ret_i] = o;
+				ret_i++;
+			}
+		}
+		return ret;
 		
 	}
 }

@@ -25,7 +25,7 @@ public class Access extends MineArea {
 
 	public Access(double[] val, double[] entries) {
 		super(val, entries);
-		this.type = 1;
+		this.type = 0;
 		makeObstacles();
 
 		if (debug) System.out.println ("AreaType: Access");
@@ -37,7 +37,8 @@ public class Access extends MineArea {
 	
 	protected Obstacle[] makeObstacles(){
 		//TODO
-		return null;
+		/*acá no hay obstáculos*/
+		return new Obstacle[0];
 		
 	}
 	

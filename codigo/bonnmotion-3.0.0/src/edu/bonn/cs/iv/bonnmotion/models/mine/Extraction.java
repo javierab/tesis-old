@@ -24,21 +24,42 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import edu.bonn.cs.iv.bonnmotion.Position;
+
 public class Extraction extends MineArea {
 	private static final long serialVersionUID = 7750320765927287614L;
+	int ndumps;
+	Position[] dumps = new Position[4];
+	
 
-	int TRUE = 1;
-	int FALSE = 0;
 	public Extraction(double[] val, double[] entries) {
 		super(val, entries);
-		this.type = 2;
-		super.obstacles = makeObstacles();
+		this.type = 1;
+		if (debug) System.out.println ("AreaType: Extraction");
+	}
 
+	public Extraction(double[] val, double[] entries, int ndumps, Position[] dumps) {
+		super(val, entries);
+		this.ndumps = ndumps;
+		this.dumps = dumps;
+		this.type = 1;
 		if (debug) System.out.println ("AreaType: Extraction");
 	}
 	
 	protected void SetDefaultValues() {
 		//TODO
+	}
+	
+	public void setDumps(int ndumps, Position[] dumps){
+		this.ndumps = ndumps;
+		this.dumps = dumps;
+	}
+	
+	public Position getDump(){
+		
+		Random ran = new Random();
+		int x = ran.nextInt(ndumps);
+		return dumps[x];
 	}
 	
 	protected Obstacle[] makeObstacles(){
@@ -107,15 +128,58 @@ public class Extraction extends MineArea {
 		return super.toString();
 	}
 	
-	
-	public static void main(String[] args){
-		
-		double[] corners = {0.0, 0.0, 0.0, 1150.0, 1150.0, 1150.0, 0.0, 1150.0};
-		double[] entries = {0.0, 100.0};
-		
-		MineArea a = new Extraction(corners, entries);
-		
-		a.print();
-		}
-	
+	public static int getAreaZone(){
+
+		Random ran = new Random();
+		return ran.nextInt(2);
+	}
+//	
+//	
+//	public static void main(String[] args){
+//		
+//		/*M1*/
+//		double[] m1_c = {0.0, 350.0, 0.0, 800.0, 300.0, 800.0, 300.0, 350.0};
+//		double[] m1_e = {200.0, 800.0};
+//		/*M2*/
+//		double[] m2_c = {950.0, 500.0, 950.0, 800.0, 1500.0, 800.0, 1500.0, 500.0};
+//		double[] m2_e = {1000.0, 800.0, 1100.0, 800.0};
+//		/*M3*/
+//		double[] m3_c = {2500.0, 600.0, 2500.0, 600.0, 2800.0, 600.0, 2800.0, 600.0};
+//		double[] m3_e = {2600.0, 800.0, 2780.0, 800.0};
+//		
+//		/*E1*/
+//		double[] e1_c = {300.0, 0.0, 300.0, 800.0, 900.0, 800.0, 900.0, 0.0};
+//		double[] e1_e = {400.0, 800.0, 700.0, 800.0};
+//		/*E2*/
+//		double[] e2_c = {1500.0, 300.0, 1500.0, 800.0, 2400.0, 800.0, 1500.0, 800.0 };
+//		double[] e2_e = {2000.0, 800.0};
+//		
+//		/*A1*/
+//		double[] a1_c = {0.0, 800.0, 0.0, 1000.0, 3400.0, 1000.0, 3400.0, 800.0};
+//		double[] a1_e = {200.0, 800.0, 1000.0, 800.0, 1100.0, 800.0, 2600.0, 800.0, 2780.0, 800.0, 400.0, 800.0, 700.0, 800.0, 2000.0, 800.0};
+//		
+//		
+//		MineArea e1 = new Extraction(e1_c, e1_e);
+//		MineArea e2 = new Extraction(e2_c, e2_e);
+//
+//		MineArea m1 = new Maintenance(m1_c, m1_e);
+//		MineArea m2 = new Maintenance(m2_c, m2_e);
+//		MineArea m3 = new Maintenance(m3_c, m3_e);
+//
+//		MineArea a1 = new Access(a1_c, a1_e);
+//
+//		System.out.println("--------EXT---------");
+//		e1.print();
+//		System.out.println("--------------------");
+//		e2.print();
+//		System.out.println("--------MAN---------");
+//		m1.print();
+//		System.out.println("--------------------");
+//		m2.print();
+//		System.out.println("--------------------");
+//		m3.print();
+//		System.out.println("---------ACC--------");
+//		a1.print();
+//		System.out.println("--------------------");}
+//	
 }
