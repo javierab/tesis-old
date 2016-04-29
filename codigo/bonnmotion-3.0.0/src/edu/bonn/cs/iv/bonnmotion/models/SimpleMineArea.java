@@ -6,6 +6,7 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.io.BufferedWriter;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.Random;
 
 import edu.bonn.cs.iv.bonnmotion.ModuleInfo;
@@ -56,17 +57,17 @@ public class SimpleMineArea extends RandomSpeedBase {
 
 	
 	/** Data to build each area **/
-	protected double[][] corners;
-	protected double[][] entries; 
+	protected LinkedList<double[]> corners;
+	protected LinkedList<double[]> entries; 
 	
 	/** Manage the Areas and nodes . */
 	protected MineArea[] mineAreas = null;
 	protected MineNode[] mineNodes = null;
 	
 	/**Area indices for each type **/
-	protected int[] candidate_areas_acc =  MineArea.findArea(0,mineAreas);
-	protected int[] candidate_areas_ext =  MineArea.findArea(1,mineAreas);
-	protected int[] candidate_areas_man =  MineArea.findArea(2,mineAreas);
+	protected int[] candidate_areas_acc =  null;
+	protected int[] candidate_areas_ext =  null;
+	protected int[] candidate_areas_man =  null;
 
 	
 	/** temporary saves the arguments for the catastrophe areas */
@@ -120,9 +121,13 @@ public class SimpleMineArea extends RandomSpeedBase {
 		mineAreas = new MineArea[n_areas];
 		
 		for(int i = 0; i < n_areas; i++){
-			mineAreas[i] = MineArea.getInstance(corners[i], entries[i], i_area[i]);
+			mineAreas[i] = MineArea.getInstance(corners.get(i), entries.get(i), i_area[i]);
 			System.out.println("New MineArea completed: " + MineArea.getArea(i_area[i]));
 		}
+		
+		candidate_areas_acc = MineArea.findArea(0,mineAreas);
+		candidate_areas_ext = MineArea.findArea(1,mineAreas);
+		candidate_areas_man = MineArea.findArea(2,mineAreas);
 		
 		/*NODES*/
 		System.out.println("Creating Nodes areas...");
@@ -168,8 +173,12 @@ public class SimpleMineArea extends RandomSpeedBase {
 				
 			for(int i=0; i< mineNodes.length; i++){
 				ref = mineNodes[i];
-				ref.print();
+				System.out.println("*****Starting node " + i + "*****");
+				//ref.print();
 				/*DO THE THINGS*/
+				System.out.println("--Current position: " + ref.current_position);
+				System.out.println("--Destination: " + ref.dest_position);				
+				System.out.println("*****Finish node " + i + "*****");
 			}
 			}
 
@@ -402,6 +411,95 @@ public class SimpleMineArea extends RandomSpeedBase {
 	 */
 	private void processArguments() {
 //		
+		/**TODO: do it for real. now just playing with it.**/
+
+		n_areas = 6;
+		n_nodes = 38;
+		
+		double[] m1_c = {0.0, 350.0, 0.0, 800.0, 300.0, 800.0, 300.0, 350.0};
+		double[] m1_e = {200.0, 800.0};
+		entries.add(m1_e);
+		corners.add(m1_c);
+		double[] m2_c = {950.0, 500.0, 950.0, 800.0, 1500.0, 800.0, 1500.0, 500.0};
+		double[] m2_e = {1000.0, 800.0, 1100.0, 800.0};
+		entries.add(m2_e);
+		corners.add(m2_c);
+		double[] m3_c = {2500.0, 600.0, 2500.0, 600.0, 2800.0, 600.0, 2800.0, 600.0};
+		double[] m3_e = {2600.0, 800.0, 2780.0, 800.0};
+		entries.add(m3_e);
+		corners.add(m3_c);
+		double[] e1_c = {300.0, 0.0, 300.0, 800.0, 900.0, 800.0, 900.0, 0.0};
+		double[] e1_e = {400.0, 800.0, 700.0, 800.0};
+		entries.add(e1_e);
+		corners.add(e1_c);
+		double[] e2_c = {1500.0, 300.0, 1500.0, 800.0, 2400.0, 800.0, 1500.0, 800.0 };
+		double[] e2_e = {2000.0, 800.0};
+		entries.add(e2_e);
+		corners.add(e2_c);
+		double[] a1_c = {0.0, 800.0, 0.0, 1000.0, 3400.0, 1000.0, 3400.0, 800.0};
+		double[] a1_e = {200.0, 800.0, 1000.0, 800.0, 1100.0, 800.0, 2600.0, 800.0, 2780.0, 800.0, 400.0, 800.0, 700.0, 800.0, 2000.0, 800.0};
+		entries.add(a1_e);
+		corners.add(a1_c);
+
+		int[] array = {2,2,2,1,1,0};
+		i_area = array;
+		n_each[0] = 1;
+		n_each[1] = 2;
+		n_each[2] = 3;
+
+		nod_each[0] = 8;
+		nod_each[1] = 20;
+		nod_each[2] = 10;
+		/** Count for nodes**/
+		int[] array2 = {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2};
+		type_nodes = array2;
+		
+		
+		start_pos_nodes = new Position[n_nodes];
+		
+		start_pos_nodes[0] = new Position(600.0, 400.0);
+		start_pos_nodes[1] = new Position(600.0, 500.0);
+		start_pos_nodes[2] = new Position(600.0, 600.0);
+		start_pos_nodes[3] = new Position(600.0, 700.0);
+		start_pos_nodes[4] = new Position(1800.0, 400.0);
+		start_pos_nodes[5] = new Position(1800.0, 600.0);
+		start_pos_nodes[6] = new Position(2100.0, 400.0);
+		start_pos_nodes[7] = new Position(2100.0, 600.0);
+		
+		start_pos_nodes[8] = new Position(1000.0, 550.0);
+		start_pos_nodes[9] = new Position(1000.0, 580.0);
+		start_pos_nodes[10] = new Position(1000.0, 610.0);
+		start_pos_nodes[11] = new Position(1000.0, 640.0);
+		start_pos_nodes[12] = new Position(1000.0, 670.0);
+		start_pos_nodes[13] = new Position(1300.0, 550.0);
+		start_pos_nodes[14] = new Position(1300.0, 580.0);
+		start_pos_nodes[15] = new Position(1300.0, 610.0);
+		start_pos_nodes[16] = new Position(1300.0, 640.0);
+		start_pos_nodes[17] = new Position(1300.0, 670.0);
+		
+		start_pos_nodes[18] = new Position(2600.0, 600.0);
+		start_pos_nodes[19] = new Position(2600.0, 625.0);
+		start_pos_nodes[20] = new Position(2600.0, 650.0);
+		start_pos_nodes[21] = new Position(2600.0, 675.0);
+		start_pos_nodes[22] = new Position(2600.0, 700.0);
+		start_pos_nodes[23] = new Position(2700.0, 600.0);
+		start_pos_nodes[24] = new Position(2700.0, 625.0);
+		start_pos_nodes[25] = new Position(2700.0, 650.0);
+		start_pos_nodes[26] = new Position(2700.0, 675.0);
+		start_pos_nodes[27] = new Position(2700.0, 700.0);
+
+		start_pos_nodes[28] = new Position(500.0, 900.0);
+		start_pos_nodes[29] = new Position(800.0, 900.0);
+		start_pos_nodes[30] = new Position(1100.0, 900.0);
+		start_pos_nodes[31] = new Position(1400.0, 900.0);
+		start_pos_nodes[32] = new Position(1700.0, 900.0);
+		start_pos_nodes[33] = new Position(2000.0, 900.0);
+		start_pos_nodes[34] = new Position(2300.0, 900.0);
+		start_pos_nodes[35] = new Position(2600.0, 900.0);
+		start_pos_nodes[36] = new Position(2900.0, 900.0);
+		start_pos_nodes[37] = new Position(3200.0, 900.0);
+
+		
 //		// check if there are not too many catastrophe areas specified
 //		if(this.miningAreaArgs.size() > this.maxCatastropheAreas){
 //			System.out.println("Only " + maxCatastropheAreas + " CatastropheAreas permitted in this model");
@@ -610,6 +708,19 @@ public class SimpleMineArea extends RandomSpeedBase {
 //			System.exit(0);
 //		}
 //	}
+
+
+
+
+
+public static void main(String[] args){
+	String[] s = {"a", "b", "c", "d"};
+	SimpleMineArea sma = new SimpleMineArea(s);
+	sma.generate();
+	
+	
+	
+}
 
 
 }
