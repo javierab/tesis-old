@@ -1,4 +1,5 @@
 package edu.bonn.cs.iv.bonnmotion.models;
+import java.text.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -13,11 +14,14 @@ import edu.bonn.cs.iv.bonnmotion.ModuleInfo;
 import edu.bonn.cs.iv.bonnmotion.Position;
 import edu.bonn.cs.iv.bonnmotion.RandomSpeedBase;
 import edu.bonn.cs.iv.bonnmotion.models.mine.*;
+import edu.bonn.cs.iv.util.PositionHashMap;
+import edu.bonn.cs.iv.util.IntegerHashMap;
 
 /** Application to create movement scenarios according to the Simple Mine Area model. */
 
 public class SimpleMineArea extends RandomSpeedBase {
     private static ModuleInfo info;
+    DecimalFormat df = new DecimalFormat("#.##");
     
     static {
         info = new ModuleInfo("SimpleMineArea");
@@ -57,12 +61,19 @@ public class SimpleMineArea extends RandomSpeedBase {
 
 	
 	/** Data to build each area **/
-	protected LinkedList<double[]> corners;
-	protected LinkedList<double[]> entries; 
+	protected LinkedList<double[]> corners = new LinkedList<double[]>();
+	protected LinkedList<double[]> entries = new LinkedList<double[]>(); 
+	
+	/** Dumps for extaction areas**/
+	protected int[] ndumps;
+	protected LinkedList<Position[]> dumps = new LinkedList<Position[]>();
 	
 	/** Manage the Areas and nodes . */
-	protected MineArea[] mineAreas = null;
-	protected MineNode[] mineNodes = null;
+	public MineArea[] mineAreas = null;
+	public Extraction[] extAreas = null;
+	public Maintenance[] manAreas = null;
+
+	public MineNode[] mineNodes = null;
 	
 	/**Area indices for each type **/
 	protected int[] candidate_areas_acc =  null;
@@ -100,7 +111,8 @@ public class SimpleMineArea extends RandomSpeedBase {
 	}
 
 	public MineArea currentArea(Position p) throws Exception{
-		for(int i=0; i < mineAreas.length; i++){
+		for(int i=0; 		/*NODOS: asumimos que están especificados los tipos que tenemos que crear y donde parten.*/
+i < mineAreas.length; i++){
 			if (mineAreas[i].contains(p.x, p.y));
 			return mineAreas[i];
 		}
@@ -113,80 +125,130 @@ public class SimpleMineArea extends RandomSpeedBase {
 		
 		this.processArguments();
 		/*AREAS: asumimos que los arreglos de corners, entries, y n_areas ahora existen y tienen valores válidos.*/
-		/*NODOS: asumimos que están especificados los tipos que tenemos que crear y donde parten.*/
 		preGeneration();
+		
+		/**TODO: sacar esto!!**/
+		parameterData.ignore = 0.0;
 		
 		/*TODO: verificar condiciones*/
 		
 		mineAreas = new MineArea[n_areas];
+		extAreas = new Extraction[n_each[1]];
+		manAreas = new Maintenance[n_each[2]];
+		int e = 0;
+		int m = 0;
 		
 		for(int i = 0; i < n_areas; i++){
-			mineAreas[i] = MineArea.getInstance(corners.get(i), entries.get(i), i_area[i]);
-			System.out.println("New MineArea completed: " + MineArea.getArea(i_area[i]));
+			if(i_area[i] == 0){ /*access*/
+				mineAreas[i] = MineArea.getInstance(corners.get(i), entries.get(i), 0);
+			}
+			else if(i_area[i] == 1){ /*extraction*/
+				mineAreas[i] = MineArea.getInstance(corners.get(i), entries.get(i), 1);
+				((Extraction)mineAreas[i]).setDumps(ndumps[e], dumps.get(e));
+				extAreas[e] = (Extraction) mineAreas[i];
+				e++;
+				
+			}
+			else if(i_area[i] == 2){
+				mineAreas[i] = MineArea.getInstance(corners.get(i), entries.get(i), 2);
+				manAreas[m] = (Maintenance) mineAreas[i];
+				m++;
+			}
+			
+			System.out.println("New MineArea completed: " + MineArea.getArea(mineAreas[i].type));
 		}
 		
-		candidate_areas_acc = MineArea.findArea(0,mineAreas);
-		candidate_areas_ext = MineArea.findArea(1,mineAreas);
-		candidate_areas_man = MineArea.findArea(2,mineAreas);
 		
 		/*NODES*/
-		System.out.println("Creating Nodes areas...");
+		System.out.println("Creating Nodes...");
 		mineNodes = new MineNode[n_nodes];
 		Random r = new Random();
 		for(int i = 0; i < n_nodes; i++){
-			switch(type_nodes[i]){
-			case 0: /*Machine*/
-			{	//pick an extraction area
-				int area = r.nextInt(this.candidate_areas_ext.length);
-				Position p = mineAreas[area].getRandomPosition();
-				/*TODO: get a real position in the area */
-				mineNodes[i] = new MachineNode(p, mineAreas[area]);				
+			if(type_nodes[i] == 0){ /*Machine*/
+				int area = r.nextInt(extAreas.length);
+				Position p = extAreas[area].getRandomPosition();
+				mineNodes[i] = new MachineNode(p, extAreas[area]);		
 			}
-			case 1: /*Operator*/
-			{ 	//pick maintenance areas
-				MineArea[] areas = (MineArea[]) Arrays.stream(mineAreas).filter(x -> x.type==1).toArray();
-				int start = r.nextInt(areas.length);
-				Position p = mineAreas[start].getRandomPosition();
-				mineNodes[i] = new OperatorNode(p, areas, mineAreas[start]);		
+			else if(type_nodes[i] == 1){ /*Operator*/
+				int area = r.nextInt(manAreas.length);
+				Position p = manAreas[area].getRandomPosition();
+				mineNodes[i] = new OperatorNode(p, manAreas, manAreas[area]);		
 			}
-				
-			case 2: /*Supervisor*/
-			{ 	//always starts in ACC = 0
+			else if(type_nodes[i] == 2){ /*Supervisor*/
+			 	//always starts in ACC = 0
 				Position p = mineAreas[0].getRandomPosition();
 				mineNodes[i] = new SupervisorNode(p, mineAreas, mineAreas[0]);		
 			}
-				
-			default:
-			{ 
+			else{ 
 				System.err.println("Node type doesn't exist:" + type_nodes[i]);
 				System.exit(1);
 			}
-			}
+			System.out.println("Node created: " + mineNodes[i].type);
 			
 		}
 
 		/*Do the things*/
 
 		int t = 0;
-		MineNode ref = null;
-			while (t < parameterData.duration) {
-				
-			for(int i=0; i< mineNodes.length; i++){
-				ref = mineNodes[i];
-				System.out.println("*****Starting node " + i + "*****");
-				//ref.print();
-				/*DO THE THINGS*/
-				System.out.println("--Current position: " + ref.current_position);
-				System.out.println("--Destination: " + ref.dest_position);				
-				System.out.println("*****Finish node " + i + "*****");
+		MineNode ref = mineNodes[0];
+		MineArea area = ref.current_area;
+		System.out.println("Nodo " + ref.type + ", area:" + area.type);
+		ref.getNextDestination(true);
+		System.out.println("actual:" + ref.current_position.toString(1) + ", dest:" + ref.dest_position.toString(1));
+		
+		//find closest vertex
+		int v_index_src = 0;
+		double v_distance_src = 1000000.0;
+		int v_index_dst = 0;
+		double v_distance_dst = 1000000.0;
+		for(int i = 0; i < area.vertices.size(); i++){
+			
+			if(ref.current_position.distance(area.vertices.get(i)) < v_distance_src){
+				v_distance_src = ref.current_position.distance(area.vertices.get(i));
+				v_index_src = i;
 			}
+			if(ref.dest_position.distance(area.vertices.get(i)) < v_distance_dst){
+				v_distance_dst = ref.dest_position.distance(area.vertices.get(i));
+				v_index_dst = i;
 			}
+		}
+		System.out.println("closest vertex src: " + area.vertices.get(v_index_src) + ", distance: " + v_distance_src);
+		
+		System.out.println("closest vertex dst: " + area.vertices.get(v_index_dst) + ", distance: " + v_distance_dst);
 
-				
-		// write the nodes into our base
-		//this.parameterData.nodes = node;
-		//if(shallwrite) mywrite();
-		postGeneration();
+		PositionHashMap toSrc = ((PositionHashMap)area.shortestpaths.get(area.vertices.get(v_index_src)));
+		PositionHashMap toDst = ((PositionHashMap)area.shortestpaths.get(area.vertices.get(v_index_dst)));
+
+		LinkedList<Position> tempway_src = (LinkedList<Position>)toSrc.get(area.vertices.get(v_index_dst));
+		LinkedList<Position> tempway_dst = (LinkedList<Position>)toDst.get(area.vertices.get(v_index_src));
+		
+		System.out.print("SRC: " + tempway_src);
+		System.out.print("DST: " + tempway_dst);
+		
+		
+//		
+//			while (t < 20) {
+//			System.out.println("*** T = " + t + "***");
+//			for(int i=0; i< mineNodes.length; i++){
+//				ref = mineNodes[i];
+//				
+//				System.out.println("NODE " + i + " TYPE " + mineNodes[i].type + "*****");
+//				mineNodes[i].getNextDestination(true);
+//				//ref.print();
+//				/*DO THE THINGS*/
+//				System.out.println("current position: " + ref.current_position.toString(2));
+//				System.out.println("destination: " + ref.dest_position.toString(2));				
+//				System.out.println("graph: " + ref.current_area.Graph);				
+//			}
+//			t++;
+//			System.out.println(t);
+//			}
+//
+//		System.out.println("done");	
+//		// write the nodes into our base
+//		//this.parameterData.nodes = node;
+//		//if(shallwrite) mywrite();
+//		postGeneration();
 	}
 
 	protected boolean parseArg(String key, String value) {
@@ -415,6 +477,34 @@ public class SimpleMineArea extends RandomSpeedBase {
 
 		n_areas = 6;
 		n_nodes = 38;
+
+		double[] a1_c = {0.0, 800.0, 0.0, 1000.0, 3400.0, 1000.0, 3400.0, 800.0};
+		double[] a1_e = {200.0, 800.0, 1000.0, 800.0, 1100.0, 800.0, 2600.0, 800.0, 2780.0, 800.0, 400.0, 800.0, 700.0, 800.0, 2000.0, 800.0};
+		entries.add(a1_e);
+		corners.add(a1_c);
+		
+		double[] e1_c = {300.0, 0.0, 300.0, 800.0, 900.0, 800.0, 900.0, 0.0};
+		double[] e1_e = {400.0, 800.0, 700.0, 800.0};
+		entries.add(e1_e);
+		corners.add(e1_c);
+		double[] e2_c = {1500.0, 300.0, 1500.0, 800.0, 2400.0, 800.0, 1500.0, 800.0 };
+		double[] e2_e = {2000.0, 800.0};
+		entries.add(e2_e);
+		corners.add(e2_c);
+
+		int[] nd = {2, 2};
+		ndumps = nd;
+		
+		Position[] e1 = new Position[2];
+		Position[] e2 = new Position[2];
+		
+		e1[0] = new Position(500,0);
+		e1[1] = new Position(600,800);
+		e2[0] = new Position(2000, 300);
+		e2[1] = new Position(2300,800);
+	
+		dumps.add(e1);
+		dumps.add(e2);
 		
 		double[] m1_c = {0.0, 350.0, 0.0, 800.0, 300.0, 800.0, 300.0, 350.0};
 		double[] m1_e = {200.0, 800.0};
@@ -428,20 +518,8 @@ public class SimpleMineArea extends RandomSpeedBase {
 		double[] m3_e = {2600.0, 800.0, 2780.0, 800.0};
 		entries.add(m3_e);
 		corners.add(m3_c);
-		double[] e1_c = {300.0, 0.0, 300.0, 800.0, 900.0, 800.0, 900.0, 0.0};
-		double[] e1_e = {400.0, 800.0, 700.0, 800.0};
-		entries.add(e1_e);
-		corners.add(e1_c);
-		double[] e2_c = {1500.0, 300.0, 1500.0, 800.0, 2400.0, 800.0, 1500.0, 800.0 };
-		double[] e2_e = {2000.0, 800.0};
-		entries.add(e2_e);
-		corners.add(e2_c);
-		double[] a1_c = {0.0, 800.0, 0.0, 1000.0, 3400.0, 1000.0, 3400.0, 800.0};
-		double[] a1_e = {200.0, 800.0, 1000.0, 800.0, 1100.0, 800.0, 2600.0, 800.0, 2780.0, 800.0, 400.0, 800.0, 700.0, 800.0, 2000.0, 800.0};
-		entries.add(a1_e);
-		corners.add(a1_c);
 
-		int[] array = {2,2,2,1,1,0};
+		int[] array = {0,1,1,2,2,2};
 		i_area = array;
 		n_each[0] = 1;
 		n_each[1] = 2;
@@ -450,54 +528,68 @@ public class SimpleMineArea extends RandomSpeedBase {
 		nod_each[0] = 8;
 		nod_each[1] = 20;
 		nod_each[2] = 10;
-		/** Count for nodes**/
-		int[] array2 = {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2};
+		
+		
+		/**UNO DE CADA UNO PARA TESTING**/
+		
+		int[] array2 = {0,1,2};
 		type_nodes = array2;
-		
-		
+		n_nodes = 3;
 		start_pos_nodes = new Position[n_nodes];
-		
 		start_pos_nodes[0] = new Position(600.0, 400.0);
-		start_pos_nodes[1] = new Position(600.0, 500.0);
-		start_pos_nodes[2] = new Position(600.0, 600.0);
-		start_pos_nodes[3] = new Position(600.0, 700.0);
-		start_pos_nodes[4] = new Position(1800.0, 400.0);
-		start_pos_nodes[5] = new Position(1800.0, 600.0);
-		start_pos_nodes[6] = new Position(2100.0, 400.0);
-		start_pos_nodes[7] = new Position(2100.0, 600.0);
-		
-		start_pos_nodes[8] = new Position(1000.0, 550.0);
-		start_pos_nodes[9] = new Position(1000.0, 580.0);
-		start_pos_nodes[10] = new Position(1000.0, 610.0);
-		start_pos_nodes[11] = new Position(1000.0, 640.0);
-		start_pos_nodes[12] = new Position(1000.0, 670.0);
-		start_pos_nodes[13] = new Position(1300.0, 550.0);
-		start_pos_nodes[14] = new Position(1300.0, 580.0);
-		start_pos_nodes[15] = new Position(1300.0, 610.0);
-		start_pos_nodes[16] = new Position(1300.0, 640.0);
-		start_pos_nodes[17] = new Position(1300.0, 670.0);
-		
-		start_pos_nodes[18] = new Position(2600.0, 600.0);
-		start_pos_nodes[19] = new Position(2600.0, 625.0);
-		start_pos_nodes[20] = new Position(2600.0, 650.0);
-		start_pos_nodes[21] = new Position(2600.0, 675.0);
-		start_pos_nodes[22] = new Position(2600.0, 700.0);
-		start_pos_nodes[23] = new Position(2700.0, 600.0);
-		start_pos_nodes[24] = new Position(2700.0, 625.0);
-		start_pos_nodes[25] = new Position(2700.0, 650.0);
-		start_pos_nodes[26] = new Position(2700.0, 675.0);
-		start_pos_nodes[27] = new Position(2700.0, 700.0);
+		start_pos_nodes[1] = new Position(1000.0, 550.0);
+		start_pos_nodes[2] = new Position(500.0, 900.0);
 
-		start_pos_nodes[28] = new Position(500.0, 900.0);
-		start_pos_nodes[29] = new Position(800.0, 900.0);
-		start_pos_nodes[30] = new Position(1100.0, 900.0);
-		start_pos_nodes[31] = new Position(1400.0, 900.0);
-		start_pos_nodes[32] = new Position(1700.0, 900.0);
-		start_pos_nodes[33] = new Position(2000.0, 900.0);
-		start_pos_nodes[34] = new Position(2300.0, 900.0);
-		start_pos_nodes[35] = new Position(2600.0, 900.0);
-		start_pos_nodes[36] = new Position(2900.0, 900.0);
-		start_pos_nodes[37] = new Position(3200.0, 900.0);
+		
+		
+//		/** Count for nodes**/
+//		int[] array2 = {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2};
+//		type_nodes = array2;
+//		
+//		
+//		start_pos_nodes = new Position[n_nodes];
+//		
+//		start_pos_nodes[0] = new Position(600.0, 400.0);
+//		start_pos_nodes[1] = new Position(600.0, 500.0);
+//		start_pos_nodes[2] = new Position(600.0, 600.0);
+//		start_pos_nodes[3] = new Position(600.0, 700.0);
+//		start_pos_nodes[4] = new Position(1800.0, 400.0);
+//		start_pos_nodes[5] = new Position(1800.0, 600.0);
+//		start_pos_nodes[6] = new Position(2100.0, 400.0);
+//		start_pos_nodes[7] = new Position(2100.0, 600.0);
+//		
+//		start_pos_nodes[8] = new Position(1000.0, 550.0);
+//		start_pos_nodes[9] = new Position(1000.0, 580.0);
+//		start_pos_nodes[10] = new Position(1000.0, 610.0);
+//		start_pos_nodes[11] = new Position(1000.0, 640.0);
+//		start_pos_nodes[12] = new Position(1000.0, 670.0);
+//		start_pos_nodes[13] = new Position(1300.0, 550.0);
+//		start_pos_nodes[14] = new Position(1300.0, 580.0);
+//		start_pos_nodes[15] = new Position(1300.0, 610.0);
+//		start_pos_nodes[16] = new Position(1300.0, 640.0);
+//		start_pos_nodes[17] = new Position(1300.0, 670.0);
+//		
+//		start_pos_nodes[18] = new Position(2600.0, 600.0);
+//		start_pos_nodes[19] = new Position(2600.0, 625.0);
+//		start_pos_nodes[20] = new Position(2600.0, 650.0);
+//		start_pos_nodes[21] = new Position(2600.0, 675.0);
+//		start_pos_nodes[22] = new Position(2600.0, 700.0);
+//		start_pos_nodes[23] = new Position(2700.0, 600.0);
+//		start_pos_nodes[24] = new Position(2700.0, 625.0);
+//		start_pos_nodes[25] = new Position(2700.0, 650.0);
+//		start_pos_nodes[26] = new Position(2700.0, 675.0);
+//		start_pos_nodes[27] = new Position(2700.0, 700.0);
+//
+//		start_pos_nodes[28] = new Position(500.0, 900.0);
+//		start_pos_nodes[29] = new Position(800.0, 900.0);
+//		start_pos_nodes[30] = new Position(1100.0, 900.0);
+//		start_pos_nodes[31] = new Position(1400.0, 900.0);
+//		start_pos_nodes[32] = new Position(1700.0, 900.0);
+//		start_pos_nodes[33] = new Position(2000.0, 900.0);
+//		start_pos_nodes[34] = new Position(2300.0, 900.0);
+//		start_pos_nodes[35] = new Position(2600.0, 900.0);
+//		start_pos_nodes[36] = new Position(2900.0, 900.0);
+//		start_pos_nodes[37] = new Position(3200.0, 900.0);
 
 		
 //		// check if there are not too many catastrophe areas specified
@@ -541,108 +633,24 @@ public class SimpleMineArea extends RandomSpeedBase {
 	}
 
 	protected boolean parseArg(char key, String val) {
-		return false;
-//		switch (key) {
-//		case 'a': 
-//			// "avgMobileNodesPerGroup"
-//			this.avgMobileNodesPerGroup = Double.parseDouble(val);
-//			System.out.println("avgMobileNodesPerGroup will not be considered in this model, because the group sizes depend on the areas");
-//			return true;
-//		case 'b': // "specify catastrophe areas"
-//			this.miningAreaArgs.add(val);
-//			// further processing will be done later in processArguments
-//			return true;
-//		case 'c': // "change"
-//			this.pGroupChange = 0;
-//			System.out.println("Group Change will not be considered in this model, because the groups belong to areas");
-//			return true;
-//		case 'e': // "MaxCatastropheAreas"
-//			this.maxCatastropheAreas = (int)Double.parseDouble(val);
-//			// to avoid errors space for catastrophe areas will be reserved in processArguments
-//			return true;
-//		case 'g': // "Vertices to approximate circle"
-//			this.circlevertices = (int)Double.parseDouble(val);
-//		case 'h': //maxspeed
-//			System.out.println("In this model you can't specify maxspeed using area dependend speed");
-//			return true;
-//		case 'j': //factor to multiply MinCObstacle paths with
-//			this.factor = Double.parseDouble(val);
-//			return true;
-//		case 'l': //minspeed
-//			System.out.println("In this model you can't specify minspeed using area dependend speed");
-//			return true;
-//		case 'o': // obstacle for all groups
-//			/** fetch params for Obstacle. */
-//			double[] obstacleParams;
-//			obstacleParams = parseDoubleArray(val);
-//			for(int i = 0; i < obstacleParams.length; i = i+2){
-//				if(obstacleParams[i] > parameterData.x){
-//					System.out.println("Obstacles' x-coordinates should be in scenario range");
-//					System.exit(0);
-//				}
-//			}
-//			for(int i = 1; i < obstacleParams.length; i = i+2){
-//				if(obstacleParams[i] > parameterData.y){
-//					System.out.println("Obstacles' y-coordinates should be in scenario range");
-//					System.exit(0);
-//				}
-//			}
-//			Obstacle newone = new Obstacle(obstacleParams);
-//			for (int i = 0; i < 5; i++) { // for each type of area
-//				obstacles[i].add(newone);
-//			}
-//			onlyOneObstacle = true;
-//			return true;
-//		case 'O': //obstacle for only one group
-//			/** fetch params for Obstacle. */
-//			double[] help_param = parseDoubleArray(val);
-//			double[] obstacleParams_group = new double[help_param.length-1];
-//			// last parameter is the number of the group to add the obstacle
-//			System.arraycopy(help_param, 0, obstacleParams_group, 0, help_param.length - 1);
-//			for(int i = 0; i < obstacleParams_group.length; i = i+2) {
-//				if(obstacleParams_group[i] > parameterData.x){
-//					System.out.println("Obstacles' x-coordinates should be in scenario range");
-//					System.exit(0);
-//				}
-//			}
-//			for(int i = 1; i < obstacleParams_group.length; i = i+2){
-//				if(obstacleParams_group[i] > parameterData.y){
-//					System.out.println("Obstacles' y-coordinates should be in scenario range");
-//					System.exit(0);
-//				}
-//			}
-//			Obstacle newone_group = new Obstacle(obstacleParams_group);
-//			this.obstacles[(int)(help_param[help_param.length-1])].add(newone_group);
-//			onlyOneObstacle = false;
-//			if (help_param[help_param.length-1] == 4) {
-//				addObsT4 = true;
-//			}
-//			return true;
-//		case 'q': // "min space for group to accept way as valid"
-//			this.mindist = Double.parseDouble(val);
-//			return true;
-//		case 'r': // "random vector max length"
-//			this.maxdist = Double.parseDouble(val);
-//			this.oldmaxdist = maxdist;
-//			return true;
-//		case 's': // "groupSizeDeviation"
-//			this.groupSizeDeviation = Double.parseDouble(val);
-//			System.out.println("Group Size Deviation will not be considered in this model, because the group sizes depend on the areas");
-//			return true;
-//		case 'w': //write all important aspects to file
-//			this.shallwrite = true;
-//			this.write_moves = true;
-//			return true;
-//		case 'v': //write all important aspects to file
-//			this.shallwrite = true;
-//			this.write_vis = true;
-//			return true;
-//		case 'K': // do not knock over pedestrians - no ambulances in areas
-//			this.no_knock_over = true;
-//			return true;
-//		default:
-//			return super.parseArg(key, val);
-//		}
+		switch (key) {
+		case 'h': //maxspeed
+			System.out.println("In this model you can't specify maxspeed using area dependend speed");
+			return true;
+		case 'l': //minspeed
+			System.out.println("In this model you can't specify minspeed using area dependend speed");
+			return true;
+		case 'w': //write all important aspects to file
+			this.shallwrite = true;
+			this.write_moves = true;
+			return true;
+		case 'v': //write all important aspects to file
+			this.shallwrite = true;
+			this.write_vis = true;
+			return true;
+		default:
+			return super.parseArg(key, val);
+		}
 	}
 
 //	public static void printHelp() {
@@ -709,18 +717,18 @@ public class SimpleMineArea extends RandomSpeedBase {
 //		}
 //	}
 
-
-
-public static void main(String[] args){
-	String a = System.getProperty("java.home");
-	System.out.println(a);
-	String[] s = {""};
-	SimpleMineArea sma = new SimpleMineArea(s);
-	sma.generate();
-	
-	
-	
-}
+//
+//
+//public static void main(String[] args){
+//	String a = System.getProperty("java.home");
+//	System.out.println(a);
+//	String[] s = {""};
+//	SimpleMineArea sma = new SimpleMineArea(s);
+//	sma.generate();
+//	
+//	
+//	
+//}
 
 
 }

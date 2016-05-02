@@ -1,0 +1,120 @@
+/*******************************************************************************
+ ** BonnMotion - a mobility scenario generation and analysis tool             **
+ ** Copyright (C) 2002-2012 University of Bonn                                **
+ ** Copyright (C) 2012-2015 University of Osnabrueck                          **
+ **                                                                           **
+ ** This program is free software; you can redistribute it and/or modify      **
+ ** it under the terms of the GNU General Public License as published by      **
+ ** the Free Software Foundation; either version 2 of the License, or         **
+ ** (at your option) any later version.                                       **
+ **                                                                           **
+ ** This program is distributed in the hope that it will be useful,           **
+ ** but WITHOUT ANY WARRANTY; without even the implied warranty of            **
+ ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             **
+ ** GNU General Public License for more details.                              **
+ **                                                                           **
+ ** You should have received a copy of the GNU General Public License         **
+ ** along with this program; if not, write to the Free Software               **
+ ** Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA **
+ *******************************************************************************/
+
+package edu.bonn.cs.iv.bonnmotion.models.mine;
+
+import java.util.Random;
+
+import edu.bonn.cs.iv.bonnmotion.Position;
+import edu.bonn.cs.iv.bonnmotion.Waypoint;
+
+/** Mine node */
+
+public class OperatorNode extends MineNode {
+	public final int area_change_avg;
+	public MineArea[] areas;
+	public int area_change = 10;
+	/* * * * * * * * * * *
+	 * area:
+	 * 0: access 
+	 * 1: extraction
+	 * 2: maintenance
+	 * * * * * * * * * * *
+	 * type:
+	 * 0: maquina: movimiento circular, solo en area de extraccion
+	 * 1: operador: movimiento en areas de mantencion
+	 * 2: supervisor: se mueve por todas las areas
+	 * * * * * * * * * * */
+	
+	public OperatorNode(Position start, MineArea[] areas, MineArea area) {
+		super(start);
+		this.type = 1;
+		this.current_area = area;
+		this.areas = areas;
+		this.min_speed = 8;
+		this.max_speed = 12;
+		this.timeout = 50;
+		this.area_change = 10;
+		this.timeout_avg = 50;
+		this.area_change_avg = 10;
+	}
+	
+	public void add(Position start) {
+		this.start = start;
+	}
+	
+	
+	public Position getNextDestination(boolean start){
+		
+		Random r = new Random();
+		timeout--;
+		if(dest_position == current_position || timeout == 0){
+			//check if i should change the area
+			if(timeout ==0) area_change--;
+			if(area_change<0){
+				//pick new area
+				System.out.println("change area");
+				MineArea a = current_area;
+				while(a == current_area){
+					current_area = areas[r.nextInt(areas.length)];
+				}
+				//set the timers
+				timeout = timeout_avg + r.nextInt(11) - 5;
+				area_change = area_change_avg + r.nextInt(5) - 2;
+				//System.out.println("Changing Operator to new area " + a + " -> "+ current_area + "; TO:" + timeout + "; AC:" + area_change);
+				dest_position = current_area.getRandomPosition();
+			}
+			else{
+				System.out.println("new position in my area");
+				//just find a new position in my area
+				dest_position = current_area.getRandomPosition();
+			}
+		}
+		else{
+			System.out.println("waiting for " + timeout + " seconds");
+			//stay in my spot
+		}		
+		return this.dest_position;
+
+	}
+	
+	public void print() {
+		System.out.println("OperatorNode: type " + type + " area " + areas.toString() + " start " + start.toString());
+	}
+	
+	public String movementString() {
+		StringBuffer sb = new StringBuffer(140*waypoints.size());
+		for (int i = 0; i < waypoints.size(); i++) {
+			Waypoint w = waypoints.elementAt(i);
+			sb.append("\n");
+			sb.append(w.time);
+			sb.append("\n");
+			sb.append(w.pos.x);
+			sb.append("\n");
+			sb.append(w.pos.y);
+			sb.append("\n");
+			sb.append(w.pos.status);
+		}
+		sb.deleteCharAt(0);
+		return sb.toString();
+	}
+
+	
+}

@@ -46,10 +46,10 @@ public abstract class MineArea extends Polygon {
 	public Position[] corners = null;
 	public Position[] entries = null;
 	public Obstacle[] obstacles = null;
+	public LinkedList<Position> vertices = new LinkedList<Position>();
 	public LinkedList<Serializable> Graph = new LinkedList<Serializable>();
 	public LinkedList<Serializable> MinGraph = new LinkedList<Serializable>();
-	public PositionHashMap shortestpaths;
-	public PositionHashMap Minshortestpaths;
+	public PositionHashMap shortestpaths = new PositionHashMap();
 	public int type;
 	public LinkedList<MineArea> adjAreas = new LinkedList<MineArea>();
 	public LinkedList<LinkedList<Position>> allways = new LinkedList<LinkedList<Position>>();
@@ -63,7 +63,25 @@ public abstract class MineArea extends Polygon {
 		default: return "???";
 		}
 	}
+	
 
+	@SuppressWarnings("rawtypes")
+	public MineArea(double[] Positions, double[] entries, int type){
+		super();
+		this.type = type;
+		this.InitializeSpecificValues(POSITIONS, Positions);
+		this.InitializeSpecificValues(ENTRIES, entries);		
+		obstacles = makeObstacles();
+		Graph= VisibilityGraph(obstacles);
+		for(int i = 0; i < ((LinkedList)Graph.get(0)).size(); i++){
+			shortestpaths.put(((Position)((LinkedList)Graph.get(0)).get(i)), Dijkstra(Graph, ((Position)((LinkedList)Graph.get(0)).get(i))));
+		}
+		this.SetDefaultValues();
+		
+		
+	}
+
+	
 	/**
 	 * Returns a MineArea instance of the correct type for Positions
 	 */
@@ -82,12 +100,12 @@ public abstract class MineArea extends Polygon {
 
 
 	/* positions: list of x,y values */
-	protected void InitializeSpecificValues(int type, double[] values) {
+	protected void InitializeSpecificValues(int valtype, double[] values) {
 
 		Position[] temp_p = new Position[values.length/2];
 		Position[] temp_e = new Position[values.length/2];
 
-		if(type == POSITIONS){ 
+		if(valtype == POSITIONS){ 
 			
 			for(int i = 0; i < values.length; i = i+2){
 				/*polygon*/
@@ -96,7 +114,7 @@ public abstract class MineArea extends Polygon {
 			}
 			corners = temp_p;
 		}
-		else if(type == ENTRIES){ 
+		else if(valtype == ENTRIES){ 
 			for(int i = 0; i < values.length; i = i+2){
 				temp_e[i/2] = new Position(values[i], values[i+1]);
 			}		
@@ -108,22 +126,6 @@ public abstract class MineArea extends Polygon {
 	 */
 	protected abstract void SetDefaultValues();
 	protected abstract Obstacle[] makeObstacles();
-
-	@SuppressWarnings("rawtypes")
-	protected MineArea(double[] Positions, double[] entries) {
-		super();
-		this.InitializeSpecificValues(POSITIONS, Positions);
-		this.InitializeSpecificValues(ENTRIES, entries);		
-		obstacles = makeObstacles();
-		
-		Graph= VisibilityGraph(obstacles);
-		for(int i = 0; i < ((LinkedList)Graph.get(0)).size(); i++){
-			shortestpaths.put(((Position)((LinkedList)Graph.get(0)).get(i)), Dijkstra(Graph, ((Position)((LinkedList)Graph.get(0)).get(i))));
-		}
-		this.SetDefaultValues();
-		
-		
-	}
 
 	public void print(){
 		System.out.print("\nCoordinates of MineArea: " + getArea(this.type) + '\n');
@@ -153,7 +155,12 @@ public abstract class MineArea extends Polygon {
 	}
 	
 	public LinkedList<Serializable> VisibilityGraph(Obstacle[] Obstacles){
-		LinkedList<Position> Vertices = new LinkedList<Position>();
+	
+		LinkedList<Position> Vertices;
+		if(vertices.size() > 0){ 
+			System.out.println("EXISTIAN VERTICES!");
+			Vertices = vertices;}
+		else{ Vertices = new LinkedList<Position>();}
 		PositionHashMap Edges = new PositionHashMap();
 		LinkedList<Serializable> VisGraph = new LinkedList<Serializable>();
 
@@ -180,6 +187,7 @@ public abstract class MineArea extends Polygon {
 		}
 		VisGraph.add(Vertices);
 		VisGraph.add(Edges);
+		vertices = Vertices;
 		return VisGraph;
 	}
 	
@@ -372,9 +380,11 @@ public abstract class MineArea extends Polygon {
 	public static int[] findArea(int type, MineArea[] m){
 		ArrayList<Integer> l = new ArrayList<Integer>();
 		/*check which indexes are the type I want*/
-		for(int i = 0; i < m.length; i++)
+		for(int i = 0; i < m.length; i++){
 			if(m[i].type == type) l.add(i);
-		return l.stream().mapToInt(i->i).toArray();
+		}
+		int[] ret =  l.stream().mapToInt(i->i).toArray();
+		return ret;
 	}
 	
 }
