@@ -15,6 +15,7 @@ import java.util.LinkedList;
 public class MineNode extends MobileNode {
 	public int type;
 	public MineArea current_area;
+	public Access access;
 	public Position start;
 	public Position current_position;
 	public Position dest_position;
@@ -52,6 +53,15 @@ public class MineNode extends MobileNode {
 		this.std_pause = 2;
 		this.state = 0;
 
+	}
+	
+	public String getType(){
+		switch(this.type){
+		case 0: return "LH";
+		case 1: return "OP";
+		case 2: return "SU";
+		default: return "??";
+		}
 	}
 	
 	public void add(Position start) {
@@ -119,6 +129,7 @@ public class MineNode extends MobileNode {
 			PositionHashMap toDst = ((PositionHashMap)current_area.shortestpaths.get(current_area.vertices.get(v_index_dst)));
 
 			route = (LinkedList<Position>)toSrc.get(current_area.vertices.get(v_index_dst));
+			System.out.println(route.size());
 			route.addFirst(current_position);
 			route.add(dest_position);
 		}
@@ -152,10 +163,10 @@ public class MineNode extends MobileNode {
 			for(int j = 0; j < steps-1; j++){
 				ret.add(src.newShiftedPosition(v_step*j, h_step*j));
 			}
-			System.out.println("route" + src.toString() + " to " + dst.toString() + " will take " + steps + " steps");
+			//System.out.println("route" + src.toString() + " to " + dst.toString() + " will take " + steps + " steps");
 			i++;
 		}
-		System.out.println("final route will take " + ret.size() + " steps");
+		//System.out.println("final route will take " + ret.size() + " steps");
 		return ret;
 	}
 	

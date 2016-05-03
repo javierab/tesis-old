@@ -30,12 +30,23 @@ import java.util.LinkedList;
 /** Mine node */
 
 public class SupervisorNode extends MineNode {
-	public final int area_change_avg;
-	public MineArea start_area;
-	public MineArea[] areas;
-	public int timeout;
-	public int area_change = 5;
+	public int pause;
+	public int repetitions;
+	public int rep_t;
 	
+	int START = -1;
+	
+	int TO_DEST = 0;
+	int PAUSE = 1;
+	int NEW_AREA = 2;
+	int GO_OUTSIDE = 3;
+	int OUTSIDE = 4;
+	int GO_INSIDE = 5;
+	
+	public MineArea[] areas;
+	public MineArea dest_area;
+	public int area_change = 0;
+		
 	/* * * * * * * * * * *
 	 * area:
 	 * 0: global 
@@ -49,55 +60,141 @@ public class SupervisorNode extends MineNode {
 	 * * * * * * * * * * */
 	
 	
-	public SupervisorNode(Position start, MineArea[] areas, MineArea start_area) {
+	public SupervisorNode(Position start, MineArea[] areas, MineArea start_area, Access access) {
 		super(start);
 		this.type = 2;
 		this.areas = areas;
-		this.current_area = this.start_area = start_area;
-		this.timeout_avg = 20;
-		this.timeout = 20;
-		this.area_change_avg = 5;
-		this.area_change = 5;
+		this.access = access;
+		this.current_area = start_area;
 		this.min_speed = 10;
-		this.max_speed = 15;
+		this.max_speed = 15;		
+		this.pause = 8;
+		this.state = START;
+		this.repetitions = 3;
+		this.rep_t = 0;
 	}
 
 	public void add(Position start) {
 		this.start = start;
 	}
 	
-	public void getNextDestination(){
-
-	Random r = new Random();
-	timeout--;
-	if(dest_position == current_position || timeout == 0){
-		//check if i should change the area
-		if(timeout == 0) area_change--;
-		if(area_change<0){
-			//pick new area
-			System.out.println("changing area");
-			MineArea a = current_area;
-			while(a == current_area){
-				current_area = areas[r.nextInt(areas.length)];
+	public Position getNextStep(){
+		
+		//System.out.println("nextstep");
+		if(state == START){
+			//System.out.println("start");
+			state = PAUSE;
+			timeout = pause -1;
+			rep_t = 0;
+			/*next iteration it will start moving*/
+		}
+		else if(state == TO_DEST){ /*moving to dest, follow route*/
+			step++;
+			//System.out.println("step " + step + "todest?");
+			if(step >= route.size()-1){/*i'm here*/
+				//System.out.println("ondest");
+				rep_t++;
+				current_position = dest_position;
+				state = PAUSE;
+				timeout = 0;
 			}
-			//set the timers
-			timeout = timeout_avg + r.nextInt(11) - 5;
-			area_change = area_change_avg + r.nextInt(3) - 1;
-			System.out.println("Changing Supervisor to new area " + a + " -> "+ current_area + "; TO:" + timeout + "; AC:" + area_change);
-			dest_position =  current_area.getRandomPosition();
+			else{ /*next step*/
+				//System.out.println("todest");
+				current_position =  route.get(step);
+			}
+		}
+		else if(state == PAUSE){
+			//System.out.println("pause");
+			timeout++;
+				if(rep_t == repetitions){ /*must find new area*/
+				//	System.out.println("newarea");
+					state = NEW_AREA;
+					step = 0;
+					rep_t = 0;
+					getNextDestination();
+				}
+				else{ /*new destination in area*/
+					//System.out.println("newinarea");
+					getNextDestination();
+					state = TO_DEST;
+					step = 0;
+				}
+		}
+		else if(state == GO_OUTSIDE){ /*leave the current area*/
+			//System.out.println("gooutside");
+
+				if(step == 0){ /*go to the entry*/
+					//System.out.println("a");
+					dest_position = current_area.getClosestEntry(current_position);
+					route = getRoute();
+					step++;
+				}
+				else if(step < route.size()){/*continue*/
+					//System.out.println("b");
+					current_position = route.get(step);
+					step++;
+				}
+				else if(step == route.size()){ /* change area*/
+					//System.out.println("c");
+					current_position = dest_position;
+					step = 0;
+					state = OUTSIDE;
+				}
+		}
+		else if(state == OUTSIDE){ /*find aux route from current entry to closest entry of dest area*/
+			//System.out.println("outside");
+
+				/*i'm in access area now*/
+				if(step == 0){ /*go to the other entry and compute route*/
+					//System.out.println("a");
+					dest_position = dest_area.getClosestEntry(current_position);
+					double this_speed = r.nextDouble()*(max_speed - min_speed) + min_speed;
+					route = stepify(this_speed, access.getConnectingRoute(current_position, dest_position));
+					step++;
+				}
+				else if(step < route.size()){
+					//System.out.println("b");
+					current_position = route.get(step);
+					step++;
+				}
+				else if(step == route.size()){
+					//System.out.println("c");
+					current_position = dest_position;
+					step = 0;
+					state = GO_INSIDE;
+				}
+		}
+		else if(state == GO_INSIDE){ /*mark as current area, then regular movements*/
+			//System.out.println("goinside");
+			current_area = dest_area;
+			state = PAUSE;
+			timeout = pause -1;
+		}
+		return current_position;
+	}	
+	
+	public void getNextDestination(){
+		if(state == PAUSE){
+			//System.out.println("new dest in area");
+			current_position = dest_position;
+			dest_position = current_area.getRandomPosition();
+			step = 0;
+			state = TO_DEST;
+		}
+		else if(state == NEW_AREA){
+			//System.out.println("new area");
+			dest_area = current_area;
+			while(current_area == dest_area){
+				dest_area = areas[r.nextInt(areas.length)];
+			}
+			state = GO_OUTSIDE;
 		}
 		else{
-			System.out.println("new position in my area");
-			//just find a new position in my area
-			dest_position = current_area.getRandomPosition();
+			System.out.println("shouldn't find new destination while on the way");
+			System.exit(0);
 		}
+		route = getRoute();
 	}
-	else{
-		//stay in my spot
-		System.out.println("waiting for " + timeout + " seconds");
-	}		
-	//return this.dest_position;
-}
 
 	public void print() {
 		System.out.println("Node type " + type + " area " + current_area + " start " + start.toString());

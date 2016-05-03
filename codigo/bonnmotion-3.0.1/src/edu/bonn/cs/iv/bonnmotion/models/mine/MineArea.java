@@ -55,11 +55,11 @@ public abstract class MineArea extends Polygon {
 	public LinkedList<LinkedList<Position>> allways = new LinkedList<LinkedList<Position>>();
 
 	
-	public static String getArea(int area){
-		switch(area){
-		case 0: return "Acceso";
-		case 1: return "Extraccion";
-		case 2: return "Mantencion";
+	public String getType(){
+		switch(this.type){
+		case 0: return "ACC";
+		case 1: return "EXT";
+		case 2: return "MAN";
 		default: return "???";
 		}
 	}
@@ -128,7 +128,7 @@ public abstract class MineArea extends Polygon {
 	protected abstract Obstacle[] makeObstacles();
 
 	public void print(){
-		System.out.print("\nCoordinates of MineArea: " + getArea(this.type) + '\n');
+		System.out.print("\nCoordinates of MineArea: " + this.getType() + '\n');
 		System.out.print("Corners: [");
 		for(Position corner:corners) System.out.print("(" + corner.x + ", " + corner.y + ")");
 		System.out.print("]\n");
@@ -140,6 +140,19 @@ public abstract class MineArea extends Polygon {
 		System.out.println("]");		
 
 	}
+	
+	public Position getClosestEntry(Position p){
+		Position min = p;
+		double mindist = 100000;
+		for(Position entry : entries){
+			if(entry.distance(p) < mindist){
+				mindist = entry.distance(p);
+				min = entry;
+			}
+		}
+		return min;
+	}
+	
 
 	public boolean intersectObstacles(Position start, Position end){
 		for(int i = 0; i < obstacles.length; i++){

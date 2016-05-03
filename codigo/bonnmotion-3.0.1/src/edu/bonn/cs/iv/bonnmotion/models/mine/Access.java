@@ -20,6 +20,9 @@
 
 package edu.bonn.cs.iv.bonnmotion.models.mine;
 
+import edu.bonn.cs.iv.bonnmotion.Position;
+import java.util.LinkedList;
+
 public class Access extends MineArea {
 	private static final long serialVersionUID = -1509884865779246928L;
 
@@ -41,5 +44,18 @@ public class Access extends MineArea {
 		return new Obstacle[0];
 		
 	}
+	
+	public LinkedList<Position> getConnectingRoute(Position exit, Position entry){
+		/*Get a connecting route from one area to another one through the access*/
+		LinkedList<Position> route = new LinkedList<Position>();
+		route.add(exit);
+		Position p = this.getRandomPosition();
+		double mid_x = ((exit.x - entry.x)/2)+entry.x;
+		route.add(new Position(mid_x, p.y));
+		route.add(entry);
+		return route;
+	}
+	
+	
 	
 }
