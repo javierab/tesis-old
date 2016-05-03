@@ -24,13 +24,28 @@ import java.util.Random;
 
 import edu.bonn.cs.iv.bonnmotion.Position;
 import edu.bonn.cs.iv.bonnmotion.Waypoint;
+import java.util.LinkedList;
+
 
 /** Mine node */
 
 public class OperatorNode extends MineNode {
+	public int pause_dest;
+	public int pause_dump;
+	public int repetitions;
+	public int rep_t;
+	
+	int START = -1;
+	int TO_DEST = 0;
+	int PAUSE_DEST = 1;
+	int NEW_AREA = 2;
+	int GO_OUTSIDE = 3;
+	
 	public final int area_change_avg;
 	public MineArea[] areas;
-	public int area_change = 10;
+	public MineArea dest_area;
+	public int area_change = 0;
+	
 	/* * * * * * * * * * *
 	 * area:
 	 * 0: access 
@@ -50,49 +65,67 @@ public class OperatorNode extends MineNode {
 		this.areas = areas;
 		this.min_speed = 8;
 		this.max_speed = 12;
-		this.timeout = 50;
-		this.area_change = 10;
-		this.timeout_avg = 50;
 		this.area_change_avg = 10;
+		this.area_change = area_change_avg + r.nextInt(5) - 2;
+		this.timeout_avg = 50;
 	}
 	
 	public void add(Position start) {
 		this.start = start;
 	}
-	
-	
-	public Position getNextDestination(boolean start){
+
+	public Position getNextStep(){
 		
-		Random r = new Random();
-		timeout--;
-		if(dest_position == current_position || timeout == 0){
-			//check if i should change the area
-			if(timeout ==0) area_change--;
-			if(area_change<0){
-				//pick new area
-				System.out.println("change area");
-				MineArea a = current_area;
-				while(a == current_area){
-					current_area = areas[r.nextInt(areas.length)];
-				}
-				//set the timers
-				timeout = timeout_avg + r.nextInt(11) - 5;
-				area_change = area_change_avg + r.nextInt(5) - 2;
-				//System.out.println("Changing Operator to new area " + a + " -> "+ current_area + "; TO:" + timeout + "; AC:" + area_change);
-				dest_position = current_area.getRandomPosition();
+		if(state == START){
+			state = PAUSE_DEST;
+			timeout = pause_ext -1;
+		}
+		else if(state == TO_DUMP || state == TO_EXT){
+			step++;
+			if(step == route.size()){/*i'm here*/
+				step = 0;
+				rep_t = 0;
+				current_position = dest_position;
+				if(dest_position == dump) state = PAUSE_DUMP;
+				if(dest_position == ext) state = PAUSE_EXT;
 			}
 			else{
-				System.out.println("new position in my area");
-				//just find a new position in my area
-				dest_position = current_area.getRandomPosition();
+				current_position =  route.get(step);
+
 			}
 		}
 		else{
-			System.out.println("waiting for " + timeout + " seconds");
-			//stay in my spot
-		}		
-		return this.dest_position;
-
+			timeout++;
+			if((state == PAUSE_DUMP && timeout == pause_dump) || (state == PAUSE_EXT && timeout == pause_ext)){ /*time to go back*/
+				getNextDestination();
+				timeout = 0;
+			}
+		}
+		return current_position;
+	}	
+	
+	public void getNextDestination(){
+		if(state == PAUSE_DEST){
+			System.out.println("new dest in area");
+			current_position = dest_position;
+			dest_position = current_area.getRandomPosition();
+			step = 0;
+			state = TO_DEST;
+		}
+		else if(state == NEW_AREA){
+			System.out.println("new area");
+			MineArea dest_area = current_area;
+			while(current_area == dest_area){
+				dest_area = areas[r.getInt(areas.length)];
+			}
+			dest_position = dest_area.getRandomPosition();
+			state = OUTSIDE;
+		}
+		else{
+			System.out.println("shouldn't find new destination while on the way");
+			System.exit(0);
+		}
+		route = getRoute();
 	}
 	
 	public void print() {

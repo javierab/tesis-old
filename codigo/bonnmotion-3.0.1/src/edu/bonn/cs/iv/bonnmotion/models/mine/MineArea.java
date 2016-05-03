@@ -141,6 +141,15 @@ public abstract class MineArea extends Polygon {
 
 	}
 
+	public boolean intersectObstacles(Position start, Position end){
+		for(int i = 0; i < obstacles.length; i++){
+			if(obstacles[i].intersectsLine(start.x, start.y, end.x, end.y)){
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public boolean equals(MineArea other) {
 		if(type != other.type) {
 			return false;

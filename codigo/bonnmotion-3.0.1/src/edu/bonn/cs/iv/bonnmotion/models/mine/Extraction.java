@@ -29,7 +29,7 @@ import edu.bonn.cs.iv.bonnmotion.Position;
 public class Extraction extends MineArea {
 	private static final long serialVersionUID = 7750320765927287614L;
 	int ndumps;
-	Position[] dumps = new Position[4];
+	Position[] dumps;
 	
 
 	public Extraction(double[] val, double[] entries) {

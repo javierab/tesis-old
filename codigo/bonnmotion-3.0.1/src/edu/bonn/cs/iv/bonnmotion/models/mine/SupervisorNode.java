@@ -24,6 +24,8 @@ import java.util.Random;
 
 import edu.bonn.cs.iv.bonnmotion.Position;
 import edu.bonn.cs.iv.bonnmotion.Waypoint;
+import java.util.LinkedList;
+
 
 /** Mine node */
 
@@ -64,7 +66,7 @@ public class SupervisorNode extends MineNode {
 		this.start = start;
 	}
 	
-	public Position getNextDestination(boolean start){
+	public void getNextDestination(){
 
 	Random r = new Random();
 	timeout--;
@@ -94,7 +96,7 @@ public class SupervisorNode extends MineNode {
 		//stay in my spot
 		System.out.println("waiting for " + timeout + " seconds");
 	}		
-	return this.dest_position;
+	//return this.dest_position;
 }
 
 	public void print() {

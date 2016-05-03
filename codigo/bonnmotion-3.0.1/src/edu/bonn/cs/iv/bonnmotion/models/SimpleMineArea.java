@@ -11,6 +11,7 @@ import java.util.LinkedList;
 import java.util.Random;
 
 import edu.bonn.cs.iv.bonnmotion.ModuleInfo;
+import edu.bonn.cs.iv.bonnmotion.models.mine.Obstacle;
 import edu.bonn.cs.iv.bonnmotion.Position;
 import edu.bonn.cs.iv.bonnmotion.RandomSpeedBase;
 import edu.bonn.cs.iv.bonnmotion.models.mine.*;
@@ -190,40 +191,28 @@ i < mineAreas.length; i++){
 		/*Do the things*/
 
 		int t = 0;
-		MineNode ref = mineNodes[0];
-		MineArea area = ref.current_area;
-		System.out.println("Nodo " + ref.type + ", area:" + area.type);
-		ref.getNextDestination(true);
-		System.out.println("actual:" + ref.current_position.toString(1) + ", dest:" + ref.dest_position.toString(1));
+		MineNode ref;
+		
+		while(t < 100){
+			//for(int i=0; i< mineNodes.length; i++){
+			ref = mineNodes[0];
+			Position p = ref.getNextStep();
+			System.out.println("t: " + t + " state:" + ref.state + ", pos:" + p.toString());
+			t++;
+		}
+			
+			
+			
+			//ref.getNextDestination(true);
+			//System.out.println("node " + ref.type + " route: " + ref.getRoute());
+			//}
+		//vemos si intersecta un obstáculo la linea recta
+		
+
+		
 		
 		//find closest vertex
-		int v_index_src = 0;
-		double v_distance_src = 1000000.0;
-		int v_index_dst = 0;
-		double v_distance_dst = 1000000.0;
-		for(int i = 0; i < area.vertices.size(); i++){
-			
-			if(ref.current_position.distance(area.vertices.get(i)) < v_distance_src){
-				v_distance_src = ref.current_position.distance(area.vertices.get(i));
-				v_index_src = i;
-			}
-			if(ref.dest_position.distance(area.vertices.get(i)) < v_distance_dst){
-				v_distance_dst = ref.dest_position.distance(area.vertices.get(i));
-				v_index_dst = i;
-			}
-		}
-		System.out.println("closest vertex src: " + area.vertices.get(v_index_src) + ", distance: " + v_distance_src);
-		
-		System.out.println("closest vertex dst: " + area.vertices.get(v_index_dst) + ", distance: " + v_distance_dst);
 
-		PositionHashMap toSrc = ((PositionHashMap)area.shortestpaths.get(area.vertices.get(v_index_src)));
-		PositionHashMap toDst = ((PositionHashMap)area.shortestpaths.get(area.vertices.get(v_index_dst)));
-
-		LinkedList<Position> tempway_src = (LinkedList<Position>)toSrc.get(area.vertices.get(v_index_dst));
-		LinkedList<Position> tempway_dst = (LinkedList<Position>)toDst.get(area.vertices.get(v_index_src));
-		
-		System.out.print("SRC: " + tempway_src);
-		System.out.print("DST: " + tempway_dst);
 		
 		
 //		
@@ -251,6 +240,8 @@ i < mineAreas.length; i++){
 //		postGeneration();
 	}
 
+
+	
 	protected boolean parseArg(String key, String value) {
 		return true;
 		/**

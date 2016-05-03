@@ -6,7 +6,8 @@ import java.util.Random;
 import edu.bonn.cs.iv.bonnmotion.MobileNode;
 import edu.bonn.cs.iv.bonnmotion.Position;
 import edu.bonn.cs.iv.bonnmotion.Waypoint;
-import java.util.Vector;
+import edu.bonn.cs.iv.util.PositionHashMap;
+import java.util.LinkedList;
 
 
 /** Mine node */
@@ -19,10 +20,15 @@ public class MineNode extends MobileNode {
 	public Position dest_position;
 	public int timeout = 0;
 	public int timeout_avg;
-	double min_speed;
-	double max_speed;
-	int avg_pause;
-	int std_pause;
+	public double min_speed;
+	public double max_speed;
+	public int avg_pause;
+	public int std_pause;
+	Random r = new Random();
+	
+	
+	public int state, step;
+	public LinkedList<Position> route = new LinkedList<Position>();
 	/* * * * * * * * * * *
 	 * area:
 	 * 0: global 
@@ -33,6 +39,7 @@ public class MineNode extends MobileNode {
 	 * 0: maquina: movimiento circular, solo en area de extraccion
 	 * 1: mantenimiento: movimiento entre areas de mantencion
 	 * 2: supervisor: se mueve por todas las areas
+	 * * * * * * * * * * *
 	 * * * * * * * * * * */
 
 	public MineNode(Position start) {
@@ -43,15 +50,19 @@ public class MineNode extends MobileNode {
 		/*each node define its pause*/
 		this.avg_pause = 4;
 		this.std_pause = 2;
+		this.state = 0;
+
 	}
 	
 	public void add(Position start) {
 		this.start = start;
 	}
 	
-	public Position getNextDestination(boolean start){
-		return current_position;
-	};
+	public Position getNextStep(){
+		return null;
+	}
+	public void getNextDestination(){
+	}
 	
 	public void print() {
 		System.out.println("Node type " + type + " start " + start.toString());
@@ -77,10 +88,80 @@ public class MineNode extends MobileNode {
 
 	/*we'll assume it's between 2 and 6s*/
 	public int getPause(){
-		Random r = new Random();
 		return r.nextInt(2*std_pause+1)+avg_pause/2;
 		
 	}
+	
+	/*get a linked list of the route from current_position to dest_position. Only works inside one area!!*/
+	public LinkedList<Position> getRoute(){
+		
+		LinkedList<Position> route;
+		LinkedList<Position> step_route;
+		
+		if(current_area.intersectObstacles(current_position, dest_position)){
+			int v_index_src = 0;
+			int v_index_dst = 0;
+			double v_distance_src = 1000000.0;
+			double v_distance_dst = 1000000.0;
+			
+			for(int i = 0; i < this.current_area.vertices.size(); i++){
+				
+				if(this.current_position.distance(current_area.vertices.get(i)) < v_distance_src){
+					v_distance_src = current_position.distance(current_area.vertices.get(i));
+					v_index_src = i;
+				}
+				if(this.dest_position.distance(current_area.vertices.get(i)) < v_distance_dst){
+					v_distance_dst = dest_position.distance(current_area.vertices.get(i));
+					v_index_dst = i;
+				}
+			}
+			PositionHashMap toSrc = ((PositionHashMap)current_area.shortestpaths.get(current_area.vertices.get(v_index_src)));
+			PositionHashMap toDst = ((PositionHashMap)current_area.shortestpaths.get(current_area.vertices.get(v_index_dst)));
+
+			route = (LinkedList<Position>)toSrc.get(current_area.vertices.get(v_index_dst));
+			route.addFirst(current_position);
+			route.add(dest_position);
+		}
+		else{
+			route = new LinkedList<Position>();
+			route.add(current_position);
+			route.add(dest_position);
+		}
+		
+		double this_speed = r.nextDouble()*(max_speed - min_speed) + min_speed;
+		step_route = stepify(this_speed, route);
+		return step_route;
+	}
+	
+	public static LinkedList<Position> stepify(double speed, LinkedList<Position> route){
+		
+		LinkedList<Position> ret = new LinkedList<Position>();
+		int i = 0, steps = 0;
+		double distance = 0.0;
+		double v_step = 0.0;
+		double h_step = 0.0;
+		Position src, dst;
+		
+		while(i < route.size()-1){
+			src = route.get(i);
+			dst = route.get(i+1);
+			distance = src.distance(dst);
+			steps = (int) Math.round(distance/speed);
+			v_step = (dst.x - src.x)/steps;
+			h_step = (dst.y - src.y)/steps;
+			for(int j = 0; j < steps-1; j++){
+				ret.add(src.newShiftedPosition(v_step*j, h_step*j));
+			}
+			System.out.println("route" + src.toString() + " to " + dst.toString() + " will take " + steps + " steps");
+			i++;
+		}
+		System.out.println("final route will take " + ret.size() + " steps");
+		return ret;
+	}
+	
+	
+	
+	
 	
 	
 }
