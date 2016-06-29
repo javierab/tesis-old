@@ -269,7 +269,8 @@ public class ProphetRouter extends ActiveRouter {
 			// bigger probability should come first
 			if (p2-p1 == 0) {
 				/* equal probabilities -> let queue mode decide */
-				return compareByQueueMode(tuple1.getKey(), tuple2.getKey());
+				//return compareByQueueMode(tuple1.getKey(), tuple2.getKey());
+				return 0;
 			}
 			else if (p2-p1 < 0) {
 				return -1;

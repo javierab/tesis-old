@@ -29,6 +29,7 @@ import edu.bonn.cs.iv.bonnmotion.Position;
 public class Extraction extends MineArea {
 	private static final long serialVersionUID = 7750320765927287614L;
 	int ndumps;
+	public int n_machines = 0;
 	Position[] dumps;
 	
 
@@ -55,7 +56,7 @@ public class Extraction extends MineArea {
 	}
 	
 	public Position getDump(){
-		
+
 		Random ran = new Random();
 		int x = ran.nextInt(ndumps);
 		return dumps[x];

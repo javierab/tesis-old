@@ -30,8 +30,6 @@ import java.util.LinkedList;
 /** Mine node */
 
 public class OperatorNode extends MineNode {
-	public int pause;
-	public int repetitions;
 	public int rep_t;
 	
 	int START = -1;
@@ -65,11 +63,11 @@ public class OperatorNode extends MineNode {
 		this.current_area = area;
 		this.access = access;
 		this.areas = areas;
-		this.min_speed = 8;
-		this.max_speed = 12;
-		this.pause = 15;
+//		this.min_speed = 0.8;
+//		this.max_speed = 1.2;
+//		this.pause = 15;
+//		this.repetitions = 10;
 		this.state = START;
-		this.repetitions = 10;
 		this.rep_t = 0;
 	}
 	
@@ -103,7 +101,6 @@ public class OperatorNode extends MineNode {
 			}
 		}
 		else if(state == PAUSE){
-			//System.out.println("pause");
 			timeout++;
 				if(rep_t == repetitions){ /*must find new area*/
 					//System.out.println("newarea");
@@ -173,7 +170,7 @@ public class OperatorNode extends MineNode {
 	}	
 	
 	public void getNextDestination(){
-		if(state == PAUSE){
+		if(state == PAUSE || (state==NEW_AREA && areas.length == 1)){
 			//System.out.println("new dest in area");
 			current_position = dest_position;
 			dest_position = current_area.getRandomPosition();
@@ -186,6 +183,7 @@ public class OperatorNode extends MineNode {
 			while(current_area == dest_area){
 				dest_area = areas[r.nextInt(areas.length)];
 			}
+			dest_position = dest_area.getClosestEntry(current_position);
 			state = GO_OUTSIDE;
 		}
 		else{

@@ -129,8 +129,7 @@ public abstract class MineArea extends Polygon {
 
 	public void print(){
 		System.out.print("\nCoordinates of MineArea: " + this.getType() + '\n');
-		System.out.print("Corners: [");
-		for(Position corner:corners) System.out.print("(" + corner.x + ", " + corner.y + ")");
+		System.out.print("Corners: ["); for(Position corner:corners) System.out.print("(" + corner.x + ", " + corner.y + ")");
 		System.out.print("]\n");
 		System.out.print("Entries: [");
 		for(Position entry:entries)	System.out.print("(" + entry.x + ", " + entry.y + ")");
@@ -138,7 +137,6 @@ public abstract class MineArea extends Polygon {
 		System.out.print("Obstacles: [");
 		for(Obstacle obs:obstacles){ System.out.print("("); obs.print(); System.out.println(")");}
 		System.out.println("]");		
-
 	}
 	
 	public Position getClosestEntry(Position p){
@@ -167,7 +165,6 @@ public abstract class MineArea extends Polygon {
 		if(type != other.type) {
 			return false;
 		}
-
 		for(int i = 0; i < corners.length; i++) {
 			if(corners[i] != other.corners[i]){
 				return false;
@@ -180,7 +177,7 @@ public abstract class MineArea extends Polygon {
 	
 		LinkedList<Position> Vertices;
 		if(vertices.size() > 0){ 
-			System.out.println("EXISTIAN VERTICES!");
+			System.out.println("previous vertices?! - WEIRD");
 			Vertices = vertices;}
 		else{ Vertices = new LinkedList<Position>();}
 		PositionHashMap Edges = new PositionHashMap();

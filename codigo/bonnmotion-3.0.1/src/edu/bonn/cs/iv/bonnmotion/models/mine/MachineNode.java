@@ -30,9 +30,6 @@ import java.util.LinkedList;
 public class MachineNode extends MineNode {
 	public Position dump;
 	public Position ext;
-	public int pause_ext;
-	public int pause_dump;
-	public int repetitions;
 	public int rep_t;
 	
 	int START = -1;
@@ -64,20 +61,21 @@ public class MachineNode extends MineNode {
 			System.exit(1);
 		}
 		/*values for machines*/
-		this.min_speed = 5;
-		this.max_speed = 8;
-		this.pause_dump = 10;
-		this.pause_ext = 12;
-		
+//		this.min_speed = 2.0;
+//		this.max_speed = 3.0;
+//		this.pause_dump = 10;
+//		this.pause = 12;
+//		
 		/*set points and repetitions for extraction*/
 		this.dump = ((Extraction)this.current_area).getDump();
 		this.ext = current_area.getRandomPosition();
 		this.repetitions = 5 + r.nextInt(3) -1;
 		
 		/*set values for route for time */
-		this.route = getRoute();
+		this.pause = 
 		this.state = START;
 		this.step = 0;
+		this.route = getRoute();
 
 	}
 	
@@ -90,30 +88,44 @@ public class MachineNode extends MineNode {
 	}
 	
 	public Position getNextStep(){
+		//System.out.println("--nextstep-- state: " + state + ", pause: " + pause + ", timeout: " + timeout + ", step: " + step + ", current_position: " + current_position + ", dest_position: " + dest_position);
+		/**/
 		
-		if(state == START){
+		if(state == START){ /*start. timeout = pause-1, 0 reps.*/
 			state = PAUSE_EXT;
-			timeout = pause_ext -1;
+			timeout = pause -1;
+			step = 0;
+			rep_t = 0;
 		}
-		else if(state == TO_DUMP || state == TO_EXT){
+		else if(state == TO_DUMP){ /*going to dump*/
 			step++;
-			if(step == route.size()){/*i'm here*/
+			if(step >= route.size()-1){/*i'm here*/
 				step = 0;
-				rep_t = 0;
+				timeout = 0;
 				current_position = dest_position;
-				if(dest_position == dump) state = PAUSE_DUMP;
-				if(dest_position == ext) state = PAUSE_EXT;
+				state = PAUSE_DUMP;
 			}
 			else{
 				current_position =  route.get(step);
-
 			}
 		}
-		else{
-			timeout++;
-			if((state == PAUSE_DUMP && timeout == pause_dump) || (state == PAUSE_EXT && timeout == pause_ext)){ /*time to go back*/
-				getNextDestination();
+		else if(state == TO_EXT){
+			step++;
+			if(step >= route.size()-1){/*i'm here*/
+				step = 0;
 				timeout = 0;
+				current_position = dest_position;
+				state = PAUSE_EXT;
+			}
+			else{
+				current_position =  route.get(step);
+			}
+		}
+		else if(state == PAUSE_DUMP || state == PAUSE_EXT){
+			timeout++;
+			if(timeout == pause){
+				timeout = 0;
+				getNextDestination();
 			}
 		}
 		return current_position;

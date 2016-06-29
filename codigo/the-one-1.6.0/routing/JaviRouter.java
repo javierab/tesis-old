@@ -14,18 +14,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import routing.maxprop.MaxPropDijkstra;
-import routing.maxprop.MeetingProbabilitySet;
+import routing.javi.JaviDijkstra;
+import routing.javi.MeetingProbabilitySet;
+import routing.javi.NodePositionsSet;
+import routing.javi.NodeDistancesSet;
 import routing.util.RoutingInfo;
+import routing.javi.GlobalMap;
+
 import util.Tuple;
 import core.Connection;
+import core.SimClock;
 import core.DTNHost;
 import core.Message;
 import core.Settings;
 
 /**
- * Implementation of MaxProp router as described in 
- * <I>MaxProp: Routing for Vehicle-Based Disruption-Tolerant Networks</I> by
+ * Implementation of Javi router as described in 
+ * <I>Javi: Routing for Vehicle-Based Disruption-Tolerant Networks</I> by
  * John Burgess et al.
  * @version 1.0
  * 
@@ -34,30 +39,49 @@ import core.Settings;
  * and divided by 1+alpha.  Using the default results in the original 
  * algorithm.  Refer to Karvo and Ott, <I>Time Scales and Delay-Tolerant Routing 
  * Protocols</I> Chants, 2008 
+ * 
+ * + GPS-less map generator by J. Born
  */
-public class MaxPropRouter extends ActiveRouter {
+public class JaviRouter extends ActiveRouter {
+	public static final double LOCAL_TIMEOUT = 60.0;
+	public static final double GLOBAL_TIMEOUT = LOCAL_TIMEOUT*10;
+	
     /** Router's setting namespace ({@value})*/
-	public static final String MAXPROP_NS = "MaxPropRouter";
+	public static final String Javi_NS = "JaviRouter";
 	/**
 	 * Meeting probability set maximum size -setting id ({@value}).
 	 * The maximum amount of meeting probabilities to store.  */
 	public static final String PROB_SET_MAX_SIZE_S = "probSetMaxSize";
     /** Default value for the meeting probability set maximum size ({@value}).*/
-    public static final int DEFAULT_PROB_SET_MAX_SIZE = 50;
+    public static final int DEFAULT_PROB_SET_MAX_SIZE = 100;
     private static int probSetMaxSize;
-
+    
 	/** probabilities of meeting hosts */
 	private MeetingProbabilitySet probs;
-	/** meeting probabilities of all hosts from this host's point of view 
-	 * mapped using host's network address */
+	
+	/** distances, local and global map**/
+	private NodeDistancesSet dists;	
+	private NodePositionsSet localmap;
+	public GlobalMap globalmap;
+	
+	/**time to generate a new map**/
+	private double timeNewMap;
+	
+	/** meeting probabilities and distances of all hosts from this host's point
+	 * of view mapped using host's network address */
 	private Map<Integer, MeetingProbabilitySet> allProbs;
+	private Map<Integer, NodeDistancesSet> allDists;
+	
 	/** the cost-to-node calculator */
-	private MaxPropDijkstra dijkstra;	
+	private JaviDijkstra dijkstra;	
+	
 	/** IDs of the messages that are known to have reached the final dst */
 	private Set<String> ackedMessageIds;
+	
 	/** mapping of the current costs for all messages. This should be set to
 	 * null always when the costs should be updated (a host is met or a new
 	 * message is received) */
+	
 	private Map<Integer, Double> costsForMessages;
 	/** From host of the last cost calculation */
 	private DTNHost lastCostFrom;
@@ -70,6 +94,7 @@ public class MaxPropRouter extends ActiveRouter {
 	public static int BYTES_TRANSFERRED_AVG_SAMPLES = 10;
 	private int[] avgSamples;
 	private int nextSampleIndex = 0;
+	
 	/** current value for the "avg number of bytes transferred per transfer
 	 * opportunity"  */
 	private int avgTransferredBytes = 0;
@@ -88,16 +113,16 @@ public class MaxPropRouter extends ActiveRouter {
 	 * the given Settings object.
 	 * @param settings The settings object
 	 */
-	public MaxPropRouter(Settings settings) {
+	public JaviRouter(Settings settings) {
 		super(settings);
-		Settings maxPropSettings = new Settings(MAXPROP_NS);		
-		if (maxPropSettings.contains(ALPHA_S)) {
-			alpha = maxPropSettings.getDouble(ALPHA_S);
+		Settings JaviSettings = new Settings(Javi_NS);		
+		if (JaviSettings.contains(ALPHA_S)) {
+			alpha = JaviSettings.getDouble(ALPHA_S);
 		} else {
 			alpha = DEFAULT_ALPHA;
 		}
 
-        Settings mpSettings = new Settings(MAXPROP_NS);
+        Settings mpSettings = new Settings(Javi_NS);
         if (mpSettings.contains(PROB_SET_MAX_SIZE_S)) {
             probSetMaxSize = mpSettings.getInt(PROB_SET_MAX_SIZE_S);
         } else {
@@ -109,35 +134,55 @@ public class MaxPropRouter extends ActiveRouter {
 	 * Copy constructor. Creates a new router based on the given prototype.
 	 * @param r The router prototype where setting values are copied from
 	 */
-	protected MaxPropRouter(MaxPropRouter r) {
+	protected JaviRouter(JaviRouter r) {
 		super(r);
 		this.alpha = r.alpha;
+		
 		this.probs = new MeetingProbabilitySet(probSetMaxSize, this.alpha);
+		this.dists = new NodeDistancesSet(probSetMaxSize);
+		this.localmap = new NodePositionsSet();
+		this.globalmap = new GlobalMap();
+
 		this.allProbs = new HashMap<Integer, MeetingProbabilitySet>();
-		this.dijkstra = new MaxPropDijkstra(this.allProbs);
+		this.allDists = new HashMap<Integer, NodeDistancesSet>();
+		this.allMap = new HashMap<Integer, NodePositionsSet>();
+		
+		this.dijkstra = new JaviDijkstra(this.allProbs);
 		this.ackedMessageIds = new HashSet<String>();
 		this.avgSamples = new int[BYTES_TRANSFERRED_AVG_SAMPLES];
 		this.sentMessages = new HashMap<DTNHost, Set<String>>();
+		
+
 	}	
 
 	@Override
 	public void changedConnection(Connection con) {
 		super.changedConnection(con);
-		
 		if (con.isUp()) { // new connection
+			int myID = getHost().getAddress();
+			/** MaxProp**/
 			this.costsForMessages = null; // invalidate old cost estimates
+			DTNHost otherHost = con.getOtherNode(getHost());
+			MessageRouter mRouter = otherHost.getRouter();
+			assert mRouter instanceof JaviRouter : "Javi only works "+ 
+			" with other routers of same type";
+			JaviRouter otherRouter = (JaviRouter)mRouter;
 			
+			/** Distance things**/
+			/* update distances on both hosts. return -> should i create new map? */
+			int i = 0;
+			int mapTimeout = dists.update(otherHost.getAddress(), getHost().getDistance(otherHost));
+			/*update new distance and merge*/
+			allDists.put(myID, dists);
+			//core.Debug.p("hasta acá d:" + allDists.size());
+			this.localmap.setId(myID);
+			this.localmap.updateNeighbors(allDists);	
+
 			if (con.isInitiator(getHost())) {
 				/* initiator performs all the actions on behalf of the
 				 * other node too (so that the meeting probs are updated
 				 * for both before exchanging them) */
-				DTNHost otherHost = con.getOtherNode(getHost());
-				MessageRouter mRouter = otherHost.getRouter();
 
-				assert mRouter instanceof MaxPropRouter : "MaxProp only works "+ 
-				" with other routers of same type";
-				MaxPropRouter otherRouter = (MaxPropRouter)mRouter;
-				
 				/* exchange ACKed message data */
 				this.ackedMessageIds.addAll(otherRouter.ackedMessageIds);
 				otherRouter.ackedMessageIds.addAll(this.ackedMessageIds);
@@ -147,15 +192,41 @@ public class MaxPropRouter extends ActiveRouter {
 				/* update both meeting probabilities */
 				probs.updateMeetingProbFor(otherHost.getAddress());
 				otherRouter.probs.updateMeetingProbFor(getHost().getAddress());
-				
+
 				/* exchange the transitive probabilities */
 				this.updateTransitiveProbs(otherRouter.allProbs);
 				otherRouter.updateTransitiveProbs(this.allProbs);
-				this.allProbs.put(otherHost.getAddress(),
-						otherRouter.probs.replicate());
-				otherRouter.allProbs.put(getHost().getAddress(),
-						this.probs.replicate());
+				
+				/* exchange distances*/
+				this.UpdateDistances(otherRouter.allDists);
+				otherRouter.UpdateDistances(this.allDists);
+				/*if enough time passed, we compute new maps*/
+
+				/*send my global map map*/
+				
+				/*merge maps and send back*/
+				
+				/* exchange last global maps generated */ 
+				this.UpdateMap(otherRouter.globalmap);
+				otherRouter.UpdateMap(this.globalmap);
+				
+				/*update probabilities*/
+				this.allProbs.put(otherHost.getAddress(), otherRouter.probs.replicate());
+				otherRouter.allProbs.put(getHost().getAddress(), this.probs.replicate());
 			}
+
+			if(mapTimeout > 0){
+				i = localmap.computeMap();
+				if(i>0){
+					core.Debug.p("node:" + getHost().getAddress() + " mapsize: " + i );
+				}
+				if(i > globalmap.getNB() || globalmap.getCT() < SimClock.getTime() - GLOBAL_TIMEOUT){
+					globalmap.setID(myID); 
+					globalmap.updateMap(localmap.getMap());
+				}
+				globalmap.mixmap(otherHost.globalmap);
+			}
+			
 		}
 		else {
 			/* connection went down, update transferred bytes average */
@@ -163,6 +234,28 @@ public class MaxPropRouter extends ActiveRouter {
 		}
 	}
 
+	/**
+	 * Updates transitive dist values by replacing the current 
+	 * NodeDistanceSet with the values from the given mapping
+	 * if the given sets have more recent updates.
+	 * @param p Mapping of the values of the other host
+	 */
+	private void UpdateDistances(Map<Integer, NodeDistancesSet> p){
+		NodeDistancesSet myDs;
+		for (Map.Entry<Integer, NodeDistancesSet> e : p.entrySet()) {
+			myDs = this.allDists.get(e.getKey()); 
+			if (myDs == null || 
+				e.getValue().getLastUpdateTime() > myDs.getLastUpdateTime() ) {
+				this.allDists.put(e.getKey(), e.getValue().replicate());
+			}
+		}		
+	}
+	
+	
+	private void updateMap(GlobalMap other_m, int myID, int otherID){
+			this.globalmap.mixMap(other_m);
+	}
+	
 	/**
 	 * Updates transitive probability values by replacing the current 
 	 * MeetingProbabilitySets with the values from the given mapping
@@ -178,6 +271,16 @@ public class MaxPropRouter extends ActiveRouter {
 			}
 		}
 	}
+	
+	
+	
+	/****************************************/
+	/************** COMPUTE MAP *************/	
+	/****************************************/
+		
+
+	
+	
 	
 	/**
 	 * Deletes the messages from the message buffer that are known to be ACKed
@@ -203,7 +306,7 @@ public class MaxPropRouter extends ActiveRouter {
 	
 	/**
 	 * Method is called just before a transfer is finalized 
-	 * at {@link ActiveRouter#update()}. MaxProp makes book keeping of the
+	 * at {@link ActiveRouter#update()}. Javi makes book keeping of the
 	 * delivered messages so their IDs are stored.
 	 * @param con The connection whose transfer was finalized
 	 */
@@ -258,8 +361,8 @@ public class MaxPropRouter extends ActiveRouter {
 	}
 	
 	/**
-	 * Returns the next message that should be dropped, according to MaxProp's
-	 * message ordering scheme (see {@link MaxPropTupleComparator}). 
+	 * Returns the next message that should be dropped, according to Javi's
+	 * message ordering scheme (see {@link JaviTupleComparator}). 
 	 * @param excludeMsgBeingSent If true, excludes message(s) that are
 	 * being sent from the next-to-be-dropped check (i.e., if next message to
 	 * drop is being sent, the following message is returned)
@@ -280,7 +383,7 @@ public class MaxPropRouter extends ActiveRouter {
 		}
 		
 		Collections.sort(validMessages, 
-				new MaxPropComparator(this.calcThreshold())); 
+				new JaviComparator(this.calcThreshold())); 
 		
 		return validMessages.get(validMessages.size()-1); // return last message
 	}
@@ -352,7 +455,7 @@ public class MaxPropRouter extends ActiveRouter {
 		 * collect all the messages that could be sent */
 		for (Connection con : getConnections()) {
 			DTNHost other = con.getOtherNode(getHost());
-			MaxPropRouter othRouter = (MaxPropRouter)other.getRouter();
+			JaviRouter othRouter = (JaviRouter)other.getRouter();
 			Set<String> sentMsgIds = this.sentMessages.get(other);
 			
 			if (othRouter.isTransferring()) {
@@ -381,8 +484,8 @@ public class MaxPropRouter extends ActiveRouter {
 		}
 		
 		/* sort the message-connection tuples according to the criteria
-		 * defined in MaxPropTupleComparator */ 
-		Collections.sort(messages, new MaxPropTupleComparator(calcThreshold()));
+		 * defined in JaviTupleComparator */ 
+		Collections.sort(messages, new JaviTupleComparator(calcThreshold()));
 		return tryMessagesForConnected(messages);	
 	}
 	
@@ -447,12 +550,12 @@ public class MaxPropRouter extends ActiveRouter {
 	}
 	
 	/**
-	 * Message comparator for the MaxProp routing module. 
+	 * Message comparator for the Javi routing module. 
 	 * Messages that have a hop count smaller than the given
 	 * threshold are given priority and they are ordered by their hop count.
 	 * Other messages are ordered by their delivery cost.
 	 */
-	private class MaxPropComparator implements Comparator<Message> {
+	private class JaviComparator implements Comparator<Message> {
 		private int threshold;
 		private DTNHost from1;
 		private DTNHost from2;
@@ -463,7 +566,7 @@ public class MaxPropRouter extends ActiveRouter {
 		 * @param treshold Messages with the hop count smaller than this
 		 * value are transferred first (and ordered by the hop count)
 		 */
-		public MaxPropComparator(int treshold) {
+		public JaviComparator(int treshold) {
 			this.threshold = treshold;
 			this.from1 = this.from2 = getHost();
 		}
@@ -475,7 +578,7 @@ public class MaxPropRouter extends ActiveRouter {
 		 * @param from1 The host where the cost of msg1 is calculated from
 		 * @param from2 The host where the cost of msg2 is calculated from 
 		 */
-		public MaxPropComparator(int treshold, DTNHost from1, DTNHost from2) {
+		public JaviComparator(int treshold, DTNHost from1, DTNHost from2) {
 			this.threshold = treshold;
 			this.from1 = from1;
 			this.from2 = from2;
@@ -489,7 +592,7 @@ public class MaxPropRouter extends ActiveRouter {
 		 * (smaller is first). If only other's hop count is below the threshold,
 		 * that comes first. If both messages are below the threshold, the one
 		 * with smaller cost (determined by 
-		 * {@link MaxPropRouter#getCost(DTNHost, DTNHost)}) is first. 
+		 * {@link JaviRouter#getCost(DTNHost, DTNHost)}) is first. 
 		 */
 		public int compare(Message msg1, Message msg2) {
 			double p1, p2;
@@ -525,8 +628,7 @@ public class MaxPropRouter extends ActiveRouter {
 				/* if costs are equal, hop count breaks ties. If even hop counts
 				   are equal, the queue ordering is used  */
 				if (hopc1 == hopc2) {
-					return 0;
-					//return compareByQueueMode(msg1, msg2);
+					return compareByQueueMode(msg1, msg2);
 				}
 				else {
 					return hopc1 - hopc2;	
@@ -542,31 +644,31 @@ public class MaxPropRouter extends ActiveRouter {
 	}
 	
 	/**
-	 * Message-Connection tuple comparator for the MaxProp routing 
-	 * module. Uses {@link MaxPropComparator} on the messages of the tuples
+	 * Message-Connection tuple comparator for the Javi routing 
+	 * module. Uses {@link JaviComparator} on the messages of the tuples
 	 * setting the "from" host for that message to be the one in the connection
 	 * tuple (i.e., path is calculated starting from the host on the other end 
 	 * of the connection).
 	 */
-	private class MaxPropTupleComparator 
+	private class JaviTupleComparator 
 			implements Comparator <Tuple<Message, Connection>>  {
 		private int threshold;
 		
-		public MaxPropTupleComparator(int threshold) {
+		public JaviTupleComparator(int threshold) {
 			this.threshold = threshold;
 		}
 		
 		/**
 		 * Compares two message-connection tuples using the 
-		 * {@link MaxPropComparator#compare(Message, Message)}.
+		 * {@link JaviComparator#compare(Message, Message)}.
 		 */
 		public int compare(Tuple<Message, Connection> tuple1,
 				Tuple<Message, Connection> tuple2) {
-			MaxPropComparator comp;
+			JaviComparator comp;
 			DTNHost from1 = tuple1.getValue().getOtherNode(getHost());
 			DTNHost from2 = tuple2.getValue().getOtherNode(getHost());
 			
-			comp = new MaxPropComparator(threshold, from1, from2);
+			comp = new JaviComparator(threshold, from1, from2);
 			return comp.compare(tuple1.getKey(), tuple2.getKey());
 		}
 	}
@@ -575,8 +677,7 @@ public class MaxPropRouter extends ActiveRouter {
 	@Override
 	public RoutingInfo getRoutingInfo() {
 		RoutingInfo top = super.getRoutingInfo();
-		RoutingInfo ri = new RoutingInfo(probs.getAllProbs().size() + 
-				" meeting probabilities");
+		RoutingInfo ri = new RoutingInfo(probs.getAllProbs().size() + " meeting probabilities");
 		
 		/* show meeting probabilities for this host */
 		for (Map.Entry<Integer, Double> e : probs.getAllProbs().entrySet()) {
@@ -595,7 +696,7 @@ public class MaxPropRouter extends ActiveRouter {
 	
 	@Override
 	public MessageRouter replicate() {
-		MaxPropRouter r = new MaxPropRouter(this);
+		JaviRouter r = new JaviRouter(this);
 		return r;
 	}
 }

@@ -21,8 +21,10 @@ public class MineNode extends MobileNode {
 	public Position dest_position;
 	public int timeout = 0;
 	public int timeout_avg;
-	public double min_speed;
-	public double max_speed;
+	public static double min_speed;
+	public static double max_speed;
+	public static int pause;
+	public static int repetitions;
 	public int avg_pause;
 	public int std_pause;
 	Random r = new Random();
@@ -51,6 +53,7 @@ public class MineNode extends MobileNode {
 		/*each node define its pause*/
 		this.avg_pause = 4;
 		this.std_pause = 2;
+		this.pause = getPause();
 		this.state = 0;
 
 	}
@@ -75,7 +78,7 @@ public class MineNode extends MobileNode {
 	}
 	
 	public void print() {
-		System.out.println("Node type " + type + " start " + start.toString());
+		System.out.println("Node type " + type + "\nstart " + start.toString() + "\n area " + current_area.getType());
 	}
 
 	public String movementString() {
@@ -98,14 +101,14 @@ public class MineNode extends MobileNode {
 
 	/*we'll assume it's between 2 and 6s*/
 	public int getPause(){
-		return r.nextInt(2*std_pause+1)+avg_pause/2;
+		return r.nextInt(2*avg_pause+1)+std_pause/2;
 		
 	}
 	
 	/*get a linked list of the route from current_position to dest_position. Only works inside one area!!*/
 	public LinkedList<Position> getRoute(){
 		
-		LinkedList<Position> route;
+		LinkedList<Position> route = new LinkedList<Position>();
 		LinkedList<Position> step_route;
 		
 		if(current_area.intersectObstacles(current_position, dest_position)){
@@ -128,13 +131,12 @@ public class MineNode extends MobileNode {
 			PositionHashMap toSrc = ((PositionHashMap)current_area.shortestpaths.get(current_area.vertices.get(v_index_src)));
 			PositionHashMap toDst = ((PositionHashMap)current_area.shortestpaths.get(current_area.vertices.get(v_index_dst)));
 
-			route = (LinkedList<Position>)toSrc.get(current_area.vertices.get(v_index_dst));
-			System.out.println(route.size());
+			LinkedList<Position> l = (LinkedList<Position>)toSrc.get(current_area.vertices.get(v_index_dst));
+			if(l!= null) route = l;
 			route.addFirst(current_position);
 			route.add(dest_position);
 		}
 		else{
-			route = new LinkedList<Position>();
 			route.add(current_position);
 			route.add(dest_position);
 		}

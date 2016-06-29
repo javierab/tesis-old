@@ -67,11 +67,11 @@ public class DisasterArea extends RandomSpeedBase {
 	private static boolean debug = false;
 
 	/** Maximum deviation from group center [m]. */
-	protected double maxdist = 2.5;
+	protected double maxdist = 1;
 	/** Minimum space needed by group. */
-	protected double mindist = 2.5;
+	protected double mindist = 1;
 	/** Average nodes per group. */
-	protected double avgMobileNodesPerGroup = 3.0;
+	protected double avgMobileNodesPerGroup = 1.0;
 	/** Standard deviation of nodes per group. */
 	protected double groupSizeDeviation = 0;
 	/** The probability for a node to change to a new group when moving into it's range. */
@@ -97,7 +97,7 @@ public class DisasterArea extends RandomSpeedBase {
 	/** remember maxpause . */
 	double oldmaxpause = 0;
 	/** remember maxdist . */
-	double oldmaxdist = 0;
+	double oldmaxdist = 1;
 	/** decide whether to write in file or not */
 	boolean shallwrite = false;
 	boolean write_moves = false;
@@ -636,8 +636,9 @@ public class DisasterArea extends RandomSpeedBase {
 		p[idx++] = "groupsize_S=" + groupSizeDeviation;		
 		p[idx++] = "writeMoves=" + (shallwrite && write_moves);
 		p[idx++] = "writeVisibilityGraph=" + (shallwrite && write_vis);
-		p[idx] = "noKnockOver=" + no_knock_over;
+		//p[idx] = "noKnockOver=" + no_knock_over;
 
+		/*
 		PrintWriter changewriter = new PrintWriter(new BufferedWriter(new FileWriter(_name + ".changes")));
 		Iterator<Map.Entry<Integer, Object>> it = statuschanges.entrySet().iterator();
 		while(it.hasNext()){
@@ -647,7 +648,7 @@ public class DisasterArea extends RandomSpeedBase {
 			changewriter.write(" ");
 		}
 		changewriter.close();
-
+		*/
 		super.write(_name, p);
 		//super.write(_name, p, statuschanges);
 	}
@@ -820,6 +821,7 @@ public class DisasterArea extends RandomSpeedBase {
 	//determins a valid random destination inside a specified area
 	public Position DetRandDst(double xleft, double xright, double ylow, double yhigh, CatastropheArea area){
 		int maximum = 0;
+		double maxdist = 1.0;
 		boolean inobstacle = false;
 		Position newdst = null;
 		
@@ -844,18 +846,25 @@ public class DisasterArea extends RandomSpeedBase {
 				System.out.println("Rechteck x" + test.x + " y " + test.y + " width " + test.width + " height " + test.height);
 			}
 			/*** Debug **/
+			System.out.println("LULZ. maxdist:" + maxdist);
+			System.out.println("area:" + area.type);
+			System.out.println("v1: " + (newdst.x - maxdist) + ", v2: " + (newdst.y - maxdist) + " v3: " + 2.0*maxdist + " v4: " + 2.0*maxdist);
 
 			if(area.contains(newdst.x - maxdist, newdst.y - maxdist, 2*maxdist, 2*maxdist)){
+				System.out.println("ACA");
 				for (int i = 0; i < obstacles[area.type].size(); i++){
 					inobstacle = obstacles[area.type].get(i).contains(newdst.x, newdst.y);
+					System.out.println("IN OBSTACLE:" + inobstacle);
 					if (inobstacle){
 						++maximum;
 						break;
 					} 
 				}
 				if (!inobstacle){
+					System.out.println("NO OBS");
 					if(OnObstacleBorder(newdst, area)){
 						System.out.println("Fehler bei detranddst");
+						System.out.println("BORDE");
 					}
 					return newdst;
 				}

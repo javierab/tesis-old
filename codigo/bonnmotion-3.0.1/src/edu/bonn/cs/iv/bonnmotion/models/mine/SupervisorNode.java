@@ -30,8 +30,6 @@ import java.util.LinkedList;
 /** Mine node */
 
 public class SupervisorNode extends MineNode {
-	public int pause;
-	public int repetitions;
 	public int rep_t;
 	
 	int START = -1;
@@ -66,11 +64,11 @@ public class SupervisorNode extends MineNode {
 		this.areas = areas;
 		this.access = access;
 		this.current_area = start_area;
-		this.min_speed = 10;
-		this.max_speed = 15;		
-		this.pause = 8;
+//		this.min_speed = 1.0;
+//		this.max_speed = 1.5;		
+//		this.pause = 8;
+//		this.repetitions = 3;
 		this.state = START;
-		this.repetitions = 3;
 		this.rep_t = 0;
 	}
 
@@ -104,7 +102,6 @@ public class SupervisorNode extends MineNode {
 			}
 		}
 		else if(state == PAUSE){
-			//System.out.println("pause");
 			timeout++;
 				if(rep_t == repetitions){ /*must find new area*/
 				//	System.out.println("newarea");
@@ -187,6 +184,7 @@ public class SupervisorNode extends MineNode {
 			while(current_area == dest_area){
 				dest_area = areas[r.nextInt(areas.length)];
 			}
+			dest_position = dest_area.getClosestEntry(current_position);
 			state = GO_OUTSIDE;
 		}
 		else{

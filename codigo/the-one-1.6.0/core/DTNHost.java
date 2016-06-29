@@ -533,4 +533,11 @@ public class DTNHost implements Comparable<DTNHost> {
 		return this.getAddress() - h.getAddress();
 	}
 
+	/**
+	 * Get distance between two DTNHosts.
+	 * @return distance to host
+	 */
+	public double getDistance(DTNHost h){
+		return this.location.distance(h.location);
+	}
 }
