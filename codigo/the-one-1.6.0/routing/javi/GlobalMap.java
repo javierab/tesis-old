@@ -30,21 +30,21 @@ public class GlobalMap {
 	
 	int myID;
 	int[] myNeighbors;
-	Map<Integer, Coord> myMap, newMap;
+	Map<Integer, Coord> myGlobalMap, newMap;
 	double creationTime;
 	
-	public GlobalMap(Map<Integer, Coord> myMap, int myID){
+	public GlobalMap(Map<Integer, Coord> myGlobalMap, int myID){
 	
 		this.myID = myID;
-		this.myNeighbors = toInt(myMap.keySet());
-		this.myMap = myMap;
+		this.myNeighbors = toInt(myGlobalMap.keySet());
+		this.myGlobalMap = myGlobalMap;
 		this.creationTime = SimClock.getTime();
 	}
 
 	public GlobalMap(){
 		this.myID = 0;
 		this.myNeighbors = new int[1];
-		this.myMap = new HashMap();
+		this.myGlobalMap = new HashMap();
 		this.creationTime = SimClock.getTime();
 	}
 
@@ -53,18 +53,23 @@ public class GlobalMap {
 	}
 	
 	public void updateMap(Map<Integer, Coord> map){
-		myMap = map;
+		myGlobalMap = map;
 	}
 	
 	public Map<Integer, Coord> getMap(){
-		if(myMap == null){
+		if(myGlobalMap == null){
 			return new HashMap<Integer, Coord>();
 		}
-		return myMap;
+		return myGlobalMap;
 	}
 	
+	public void setMap(Map<Integer, Coord> m){
+		myGlobalMap = m;
+		myNeighbors = myGlobalMap.getKeys();
+	}
+
 	public int mixMap(GlobalMap other){
-		if((myMap == null) || (myMap.size() == 0) || (other.myMap.size() == 0)){
+		if((myGlobalMap == null) || (myGlobalMap.size() == 0) || (other.myGlobalMap.size() == 0)){
 			core.Debug.p("need a starting map -- aborting");
 			return -1;
 		}
@@ -98,10 +103,10 @@ public class GlobalMap {
 			}
 		}
 		
-		double alpha_j = getAngle(myMap.get(myID), myMap.get(j));
-		double alpha_k = getAngle(myMap.get(myID), myMap.get(other.myID));
-		double beta_i = getAngle(other.myMap.get(other.myID), myMap.get(myID));
-		double beta_j = getAngle(other.myMap.get(other.myID), myMap.get(j));
+		double alpha_j = getAngle(myGlobalMap.get(myID), myGlobalMap.get(j));
+		double alpha_k = getAngle(myGlobalMap.get(myID), myGlobalMap.get(other.myID));
+		double beta_i = getAngle(other.myGlobalMap.get(other.myID), myGlobalMap.get(myID));
+		double beta_j = getAngle(other.myGlobalMap.get(other.myID), myGlobalMap.get(j));
 		double corr, corr_dist, dist;
 		boolean needMirr;
 		
@@ -119,15 +124,18 @@ public class GlobalMap {
 			core.Debug.p("angles don't match -- aborting");
 			return -1;
 		}
-		corr_dist = myMap.get(myID).distance(myMap.get(other.myID));
+		corr_dist = myGlobalMap.get(myID).distance(myGlobalMap
+.get(other.myID));
 		
 		/*TODO: pick the node with more neighbors */
 		newMap.clear();
-		newMap.putAll(myMap);
+		newMap.putAll(myGlobalMap
+);
 			
-		Coord old_0 = other.myMap.get(other.myID);
+		Coord old_0 = other.myGlobalMap.get(other.myID);
 		/*first adjust the other map*/
-		Map<Integer, Coord> fixedMap = fixMap(other.myMap, corr, needMirr);
+		Map<Integer, Coord> fixedMap = fixMap(other.myGlobalMap
+, corr, needMirr);
 		
 		for(Map.Entry<Integer, Coord> m : fixedMap.entrySet()){
 			int i = m.getKey();
@@ -135,9 +143,11 @@ public class GlobalMap {
 			newMap.put(i, new Coord(c_i.getX() + old_0.getX(), c_i.getY() + old_0.getY()));
 		}
 		myNeighbors = toInt(newMap.keySet());
-		if((newMap.size() > myMap.size()) || (creationTime < SimClock.getTime() - JaviRouter.GLOBAL_TIMEOUT)){
+		if((newMap.size() > myGlobalMap
+.size()) || (creationTime < SimClock.getTime() - JaviRouter.GLOBAL_TIMEOUT)){
 			core.Debug.p("new map added");
-			myMap = newMap;
+			myGlobalMap
+ = newMap;
 			creationTime = SimClock.getTime();
 			return 0;
 		}
@@ -192,6 +202,7 @@ public class GlobalMap {
 				newmap.put(m.getKey(), new Coord(-(c.getX()+dx),c.getY()+dy));
 			}
 		}
+		return newmap;
 	}
 	
 	public int pickMap(GlobalMap m2){

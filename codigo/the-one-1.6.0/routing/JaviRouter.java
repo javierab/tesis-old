@@ -45,7 +45,8 @@ import core.Settings;
 public class JaviRouter extends ActiveRouter {
 	public static final double LOCAL_TIMEOUT = 60.0;
 	public static final double GLOBAL_TIMEOUT = LOCAL_TIMEOUT*10;
-	
+	public static final int[] FIXED_NODES = {1,10,30};
+			
     /** Router's setting namespace ({@value})*/
 	public static final String Javi_NS = "JaviRouter";
 	/**
@@ -66,7 +67,8 @@ public class JaviRouter extends ActiveRouter {
 	
 	/**time to generate a new map**/
 	private double timeNewMap;
-	
+	public boolean mapNotComputed = true;
+
 	/** meeting probabilities and distances of all hosts from this host's point
 	 * of view mapped using host's network address */
 	private Map<Integer, MeetingProbabilitySet> allProbs;
@@ -145,7 +147,6 @@ public class JaviRouter extends ActiveRouter {
 
 		this.allProbs = new HashMap<Integer, MeetingProbabilitySet>();
 		this.allDists = new HashMap<Integer, NodeDistancesSet>();
-		this.allMap = new HashMap<Integer, NodePositionsSet>();
 		
 		this.dijkstra = new JaviDijkstra(this.allProbs);
 		this.ackedMessageIds = new HashSet<String>();
@@ -200,20 +201,19 @@ public class JaviRouter extends ActiveRouter {
 				/* exchange distances*/
 				this.UpdateDistances(otherRouter.allDists);
 				otherRouter.UpdateDistances(this.allDists);
-				/*if enough time passed, we compute new maps*/
-
-				/*send my global map map*/
 				
 				/*merge maps and send back*/
-				
+				this.UpdateMap(otherRouter.globalmap, myID, otherHost.getAddress());
+
 				/* exchange last global maps generated */ 
-				this.UpdateMap(otherRouter.globalmap);
 				otherRouter.UpdateMap(this.globalmap);
 				
 				/*update probabilities*/
 				this.allProbs.put(otherHost.getAddress(), otherRouter.probs.replicate());
 				otherRouter.allProbs.put(getHost().getAddress(), this.probs.replicate());
+				core.Debug.p("node:" + getHost().getAddress() + " globupdate: " + globalmap.getNB() );
 			}
+			/*if enough time passed, we compute new maps*/
 
 			if(mapTimeout > 0){
 				i = localmap.computeMap();
@@ -222,9 +222,14 @@ public class JaviRouter extends ActiveRouter {
 				}
 				if(i > globalmap.getNB() || globalmap.getCT() < SimClock.getTime() - GLOBAL_TIMEOUT){
 					globalmap.setID(myID); 
-					globalmap.updateMap(localmap.getMap());
+					if(mapNotComputed){
+						globalmap.setMap(localmap.getMap());
+						mapNotComputed = false;
+					}
+					else{
+						globalmap.updateMap(localmap.getMap());
+					}
 				}
-				globalmap.mixmap(otherHost.globalmap);
 			}
 			
 		}
@@ -251,10 +256,22 @@ public class JaviRouter extends ActiveRouter {
 		}		
 	}
 	
-	
-	private void updateMap(GlobalMap other_m, int myID, int otherID){
+	/**
+	 * Updates the local map merging the global map.
+	 */
+	private void UpdateMap(GlobalMap other_m, int myID, int otherID){
+			if(mapNotComputed) return;
+			this.globalmap.updateMap(this.localmap.getMap());
 			this.globalmap.mixMap(other_m);
 	}
+
+	/**
+	 * Updates the local map replacing the current map with the one computed by the other node.
+	 */
+	private void UpdateMap(GlobalMap other_m){
+		if(mapNotComputed) return;
+		this.globalmap = other_m;
+	}	
 	
 	/**
 	 * Updates transitive probability values by replacing the current 
@@ -271,14 +288,6 @@ public class JaviRouter extends ActiveRouter {
 			}
 		}
 	}
-	
-	
-	
-	/****************************************/
-	/************** COMPUTE MAP *************/	
-	/****************************************/
-		
-
 	
 	
 	
