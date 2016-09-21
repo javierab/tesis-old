@@ -27,13 +27,14 @@ import core.SimClock;
  */
 public class NodePositionsSet {
 	
+	final double EPSILON = 0.01;
 	int myID;
-	boolean synced = true;
+	public boolean synced = true;
 	private List<Integer> staticIDs;
 	private List<Integer> myNeighbors;
 	Map<Integer, NodeDistancesSet> allNeighbors;
 	Map<Integer, Coord> myMap, myMapOld;
-	double creationTime, lastUpdateTime;
+	double creationTime, updateTime;
 	
 	public NodePositionsSet(Map<Integer, NodeDistancesSet> allNeighbors, int myID, ArrayList<Integer> staticIDs){
 	
@@ -41,7 +42,7 @@ public class NodePositionsSet {
 		this.myID = myID;
 		/*TODO: update neighbor input from allNeighbors to be arraylist*/
 		this.myNeighbors = allNeighbors.get(myID).knownNeighbors();
-		this.creationTime = lastUpdateTime = SimClock.getTime();
+		this.creationTime = updateTime = SimClock.getTime();
 		this.staticIDs = staticIDs;
 
 	}
@@ -49,6 +50,17 @@ public class NodePositionsSet {
 	public NodePositionsSet(int myID, ArrayList<Integer> staticIDs){
 		this.myID = myID;
 		this.staticIDs = staticIDs;
+	}
+	//only to use by static nodes for global map
+	public NodePositionsSet(int myID, List<Integer> staticIDs, Map<Integer, Coord> map){
+		this.myID = myID;
+		this.synced = true;
+		this.staticIDs = staticIDs;
+		this.myMap = map;
+		this.myNeighbors = new ArrayList<Integer>();
+		myNeighbors.addAll(map.keySet());
+		//max time, so it never gets overwritten.
+		this.creationTime = this.updateTime = Double.MAX_VALUE;
 	}
 	
 	public NodePositionsSet(){
@@ -66,6 +78,13 @@ public class NodePositionsSet {
 	public void setStaticIDs(ArrayList<Integer> set){
 		staticIDs = set;
 	}
+	
+	public Coord getCoord(int x){
+		if(myMap.containsKey(x))
+			return myMap.get(x);
+		else return new Coord(0.0,0.0);
+	}
+	
 	
 	/* update neighbors, without computing a map */
 	/* return: number of static nodes, or -1 if i didn't compute the map */
@@ -85,6 +104,7 @@ public class NodePositionsSet {
 			synced = false;
 			ret = -1;
 		}
+		this.updateTime = SimClock.getTime();
 		return ret;
 	}
 	
@@ -95,11 +115,6 @@ public class NodePositionsSet {
 	
 	
 	public Map<Integer, Coord> getMap(){
-		if(myMap == null || synced == false){
-			int i = computeMap();
-			if (i < 0) /*couldn't be computed*/
-				return new HashMap<Integer, Coord>();
-		}
 		return myMap;
 	}
 	
@@ -218,7 +233,6 @@ public class NodePositionsSet {
 		this.myMap.put(node_p, new Coord(dist_i_p, 0.0));
 		this.myMap.put(node_q, new Coord(dist_i_q*Math.cos(ang), dist_i_q*Math.sin(ang)));
 
-
 		
 		/*add the rest-- if i can*/
 		for(int n : myNeighbors){
@@ -247,15 +261,16 @@ public class NodePositionsSet {
 					beta = Math.acos(
 							(dist_i_n*dist_i_n + dist_i_q*dist_i_q - dist_q_n*dist_q_n)/(2*dist_i_n*dist_i_q));
 					x = dist_i_n*Math.cos(alpha);
-					
 					/*see what side it is on */
 					
-					if(Math.abs(alpha+beta-ang) < 0.5){
+					double angdiff = Math.abs(alpha-ang);
+					if(Math.abs(beta-angdiff) < EPSILON){
 						y = dist_i_n*Math.sin(alpha);
 					}
 					else{
 						y = -dist_i_n*Math.sin(alpha);
 					}
+
 					this.myMap.put(n, new Coord(x, y));
 					
 					/*we see if it's static*/
@@ -277,7 +292,6 @@ public class NodePositionsSet {
 				
 		double deltax = orig.getX();
 		double deltay = orig.getY();
-		System.out.println("dx:" + deltax + ",dy:" + deltay);
 		for(Map.Entry<Integer, Coord> entry : map.entrySet())
 			ret.put(entry.getKey(), new Coord(entry.getValue().getX() + deltax, entry.getValue().getY() + deltay));
 		return ret;
@@ -309,7 +323,10 @@ public class NodePositionsSet {
 	
 	/*find suitable neighbor for angle correction*/
 	public static int findNeighbor(Map<Integer, Coord> map1, Map<Integer, Coord> map2, int id1, int id2){
-		
+		if(map1 == null || map2 == null){
+			core.Debug.p("null map?");
+			return -1;
+		}
 		int k = -1;
 		for(Integer m: map1.keySet()){
 			if(map2.keySet().contains(m) && m!=id1 && m!=id2){ 
@@ -326,9 +343,11 @@ public class NodePositionsSet {
 	 * both maps must contain both ids and a common neighbor
 	 * */
 	public static Map<Integer, Coord> mixMap(Map<Integer, Coord> map1, Map<Integer, Coord> map2, int id1, int id2){
-		
-		Map<Integer, Coord> ret = new HashMap<Integer, Coord>();
 
+		//core.Debug.p("**mixmap**");
+		//core.Debug.p(toString(map1, id1));
+		//core.Debug.p(toString(map2, id2));
+		Map<Integer, Coord> ret = new HashMap<Integer, Coord>();
 		//first: pick the neighbors we share to triangulate -- we use 2
 		int nb = findNeighbor(map1, map2, id1, id2);
 		
@@ -368,17 +387,18 @@ public class NodePositionsSet {
 		double beta_i = Math.atan2(i_map2.getY(), i_map2.getX());
 		double beta_j = Math.atan2(j_map2.getY(), j_map2.getX());
 		
-		if(((alpha_j - alpha_k < Math.PI) && (beta_j-beta_i > Math.PI)) 
-				|| ((alpha_j - alpha_k > Math.PI) && (beta_j - beta_i < Math.PI))){
+		if( ((alpha_j - alpha_k <= Math.PI) && (beta_j-beta_i >= Math.PI)) 
+				|| ((alpha_j - alpha_k >= Math.PI) && (beta_j - beta_i <= Math.PI))){
 			mirr = false;
 			corr = beta_i - alpha_k + Math.PI;
 		}
-		if(((alpha_j - alpha_k < Math.PI) && (beta_j-beta_i < Math.PI)) 
-				|| ((alpha_j - alpha_k > Math.PI) && (beta_j - beta_i > Math.PI))){
+		else if(((alpha_j - alpha_k <= Math.PI) && (beta_j-beta_i <= Math.PI)) 
+				|| ((alpha_j - alpha_k >= Math.PI) && (beta_j - beta_i >= Math.PI))){
 			mirr = true;
 			corr = beta_i + alpha_k;
 		}
 		else{
+			core.Debug.p("alpha_diff:" + (alpha_j - alpha_k) + ", beta_diff: " + (beta_j - beta_i));
 			System.out.println("weird angles");
 			return null;
 		}
@@ -395,6 +415,21 @@ public class NodePositionsSet {
 		}
 		return map1;
 	}
+		
+	@Override
+	public String toString(){
+		String s = "*** " + myID + ":";
+		for(Map.Entry<Integer, Coord> e : myMap.entrySet()){
+			s += "[" + e.getKey() + ": " + e.getValue().toString() + "]";
+		}
+		return s;
+	}
 	
-	
+	public static String toString(Map<Integer, Coord> m, int id){
+		String s = "*** " + id + ":";
+		for(Map.Entry<Integer, Coord> e : m.entrySet()){
+			s += "[" + e.getKey() + ": " + e.getValue().toString() + "]";
+		}
+		return s;
+	}
 }

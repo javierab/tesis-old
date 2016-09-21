@@ -82,7 +82,12 @@ public class JaviRouter extends ActiveRouter {
 	private NodePositionsSet localmap;
 	public int staticCount;
 	public HashMap<Integer, Coord> staticNodes;
-
+	public HashMap<Integer, DTNHost> seenHosts;
+	
+	double mapError;
+	double lastClock;
+	private HashMap<Double, Double> avgMapError;
+	private HashMap<Double, Integer> mapSize;
 	
 	/** global map **/
 	public GlobalMap globalmap;
@@ -184,6 +189,12 @@ public class JaviRouter extends ActiveRouter {
 		this.localmap = new NodePositionsSet();
 		this.globalmap = new GlobalMap();
 
+		this.seenHosts = new HashMap<Integer, DTNHost>();
+		this.mapError = 0.0;
+		this.lastClock = 0.0;
+		this.avgMapError = new HashMap<Double, Double>();
+		this.mapSize = new HashMap<Double, Integer>();
+		
 		this.allProbs = new HashMap<Integer, MeetingProbabilitySet>();
 		this.allDists = new HashMap<Integer, NodeDistancesSet>();
 		
@@ -216,6 +227,9 @@ public class JaviRouter extends ActiveRouter {
 			int myID = getHost().getAddress();
 			int otherID = otherHost.getAddress();
 			
+			this.seenHosts.put(otherID, otherHost);
+			this.seenHosts.putAll(otherRouter.seenHosts);
+			
 			if(firstConnection){
 				ArrayList<Integer> staticIDs = new ArrayList<Integer>();
 				staticIDs.addAll(staticNodes.keySet());
@@ -238,7 +252,7 @@ public class JaviRouter extends ActiveRouter {
 			staticCount = localmap.update(allDists, true);
 			globalmap.updateMap(localmap);
 			
-			if(staticCount > 0)	core.Debug.p("t = " + SimClock.getTime() + ", map computed node" + myID + ", static nodes seen: " + staticCount);
+			//if(staticCount > 0)	core.Debug.p("t = " + SimClock.getTime() + ", map computed node" + myID + ", static nodes seen: " + staticCount);
 			
 			if (con.isInitiator(getHost())) {
 
@@ -260,45 +274,85 @@ public class JaviRouter extends ActiveRouter {
 				
 				/** JaviRouter map **/
 				
-				/*compute local maps with new distances*/
-				
-				/*Exchange to generate global maps. We need at least 2 static nodes to generate a globalmap*/
-				/*Case 1: some of us have enough static nodes*/
-				core.Debug.p("my static count:" + this.staticCount);
-				core.Debug.p("other static count:" + otherRouter.staticCount);
-				if(this.staticCount > 3 || otherRouter.staticCount > 3){ 
-					
+				/*Exchange to generate global maps. We need at least 3 static nodes to generate a globalmap*/
+
+				//*Case 1: I have enough static nodes, I compute the globalmap and try to add his local*
+				if(this.staticCount >= 3){ 
+					//core.Debug.p("case1 - my staticcount>3");
+					//core.Debug.p(localmap.toString());
+
+					/*I get his local map*/
+					this.globalmap.addMap(otherRouter.localmap, otherID);
+					/*I try to compute globalmap*/
+					int glb = this.globalmap.makeGlobal();
+					//core.Debug.p("n" + myID);
+					//core.Debug.p("diff " + myID + ": " + this.globalmap.getGlobalCoord(myID).toString() + " vs " + myLoc.toString());
+					//core.Debug.p("1-glb: " + this.globalmap.toString());
+					/* If I succeed, send globalmap and update his with mine */
+					if(glb > 0){
+						otherRouter.globalmap.addMap(this.globalmap);
+					}/* If I fail, send localmap */
+					else{
+						otherRouter.globalmap.addMap(this.localmap, myID);
+					}
+					//core.Debug.p("t = " + SimClock.getTime() + " node:" + getHost().getAddress() + " " + globalmap.toString() );
+
+				}
+				/* Case 2: The other node has enough static nodes,
+				 * he computes the globalmap and shares with me
+				 * */
+				else if(otherRouter.staticCount>= 3){
+					//core.Debug.p("case2 - otherstaticcount>3");
 					/*I send my local map*/
 					otherRouter.globalmap.addMap(this.localmap, myID);
 					/*Other triescomputes globalmap*/
 					int glb = otherRouter.globalmap.makeGlobal();
+					//core.Debug.p("n" + otherID);
+					//core.Debug.p("diff " + otherID + ": " + otherRouter.globalmap.getGlobalCoord(otherID).toString() + " vs " + otherLoc.toString());
+					//core.Debug.p("2-glb: " + otherRouter.globalmap.toString());
 					/* If he succeeds, send me his globalmap and update mine with his */
 					if(glb > 0){
 						this.globalmap.addMap(otherRouter.globalmap);
-					}/* If he fails, he sends me his localmap and I try to compute globalmap */
+					}/* If he fails, he just sends me his localmap */
 					else{
 						this.globalmap.addMap(otherRouter.localmap, otherID);
-						glb = this.globalmap.makeGlobal();
-						if(glb > 0)
-							otherRouter.globalmap.addMap(this.globalmap);
-						else
-							otherRouter.globalmap.addMap(otherRouter.localmap, otherID);
 					}
+					//core.Debug.p("t = " + SimClock.getTime() + "node:" + getHost().getAddress() + " " + globalmap.toString() );
+
 				}
 				
 				/*Case 3: We don't have static nodes
 				 * we just add our localmaps for future update
 				 */
 				else if(this.staticCount < 3 || otherRouter.staticCount < 3){
+					//core.Debug.p("case3 - no static nodes");
 					this.globalmap.addMap(otherRouter.localmap, otherID);
 					otherRouter.globalmap.addMap(this.localmap, myID);
 				}
 				else{
-					core.Debug.p("wut");
+					core.Debug.p("case4 - other case: mysc" + this.staticCount + ", osc:" + otherRouter.staticCount);
 				}
-				core.Debug.p("node:" + getHost().getAddress() + " globupdate: " + globalmap.globalMap.size() );
+				//get error
+				core.Debug.p("ACA");
+				Map<Integer, Coord> global = this.globalmap.getGlobalMap();
+				if(global != null && SimClock.getTime() > lastClock + 1){
+					this.mapError = 0.0;
+					if(global.size() > 0){
+						for(Map.Entry<Integer, Coord> pos : global.entrySet()){
+							core.Debug.p("c1: " + pos.getValue().toString() + ", c2: " + this.seenHosts.get(pos.getKey()).getLocation());
+							this.mapError += pos.getValue().distance(this.seenHosts.get(pos.getKey()).getLocation());
+						}
+						this.mapError = mapError/global.size();
+						core.Debug.p("error: " + mapError);
+						core.Debug.p("size: " + global.size());
+					}
+					this.lastClock = SimClock.getTime();
+					avgMapError.put(lastClock, this.mapError);
+					mapSize.put(lastClock, global.size());
 			}
-			
+
+
+			}
 		}
 		else {
 			/* connection went down, update transferred bytes average */
@@ -733,6 +787,14 @@ public class JaviRouter extends ActiveRouter {
 
 		return top;
 	}
+	@Override
+	protected void transferAborted(Connection con) {
+		/*just before connection finishes, i update distances again*/
+		DTNHost otherHost = con.getOtherNode(getHost());
+		this.dists.update(otherHost.getAddress(), getHost().getDistance(otherHost));
+
+	}
+
 	
 	@Override
 	public MessageRouter replicate() {

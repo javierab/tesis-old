@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.AbstractMap;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -36,7 +37,8 @@ public class GlobalMap {
 	 * 0 if synced with my own map
 	 * 1 if not synced, using someone else's map -> must merge maps
 	 */
-	public int myID, synced, mapCount, ref_id;
+	final static double EPSILON = 0.2;
+	public int myID, synced, mapCount, ref_id, ref_id2;
 	public Coord ref_c;
 	public boolean mapExists;
 	private Map<Integer, Double> dists;
@@ -101,6 +103,9 @@ public class GlobalMap {
 	
 	/*update my map with someone else's local map*/
 	public int addMap(NodePositionsSet otherMap, int otherID){
+		if(otherMap.getMap() == null){
+			return -1;
+		}
 		allMaps.put(otherID, otherMap);
 		synced = -1;
 		return 0;
@@ -154,10 +159,34 @@ public class GlobalMap {
 		return globalMap;
 	}
 	
+	public Map<Integer, Coord> getGlobalMap(){
+		if(mapExists && globalMap != null){
+			Map<Integer, Coord> realCoordMap = new HashMap<Integer, Coord>();
+			for(Map.Entry<Integer, Coord> c : this.globalMap.entrySet()){
+				realCoordMap.put(c.getKey(), realCoord(c.getValue()));
+			}
+			return realCoordMap;
+		}
+		else return null;
+	}
+	
+	public Coord getGlobalCoord(int i){
+		if(globalMap != null && globalMap.containsKey(i)){
+			return realCoord(globalMap.get(i));
+		}
+		else{
+			return null;
+		}
+	}
+	
 	/*make my global map. first create a map to adjust my map to real coordinates, then 'add' the nodes from the other localmaps*/
 	public int makeGlobal(){
+		if(mapExists){
+		//TODO: merge new maps	
+			return -1;
+		}
+		//usar 3 estáticos para ajustar coordenadas
 		
-		//TODO: usar 3 nodos estáticos para calcular la posicion de mi ID en mi mapa 'real' y agregarlo antes de computar los otros.
 		Map<Integer, Coord> m = new HashMap<Integer, Coord>();
 		ArrayList<Integer> staticNBs = new ArrayList<Integer>();
 		/*first find the static nodes i have in my map*/
@@ -174,29 +203,33 @@ public class GlobalMap {
 			return -1;
 		}
 		else{
-			double d1 = dists.get(staticNBs.get(0));
-			double d2 = dists.get(staticNBs.get(1));
-			double d3 = dists.get(staticNBs.get(2));
-			if(d1< 0 || d2< 0 || d3< 0 ) return -1;
-			Integer def = -1;
 			Coord c1 = staticNodes.get(staticNBs.get(0));
 			Coord c2 = staticNodes.get(staticNBs.get(1));
 			Coord c3 = staticNodes.get(staticNBs.get(2));
 			if(c1 == null || c2 == null || c3 == null) return -1;
-			//core.Debug.p(c1.toString()+ "-d:" + d1);
-			//core.Debug.p(c2.toString()+ "-d:" + d2);
-			//core.Debug.p(c3.toString()+ "-d:" + d3);
-			Coord myCoord = findCoordinate(c1, c2, c3, d1, d2, d3);
-			if(myCoord != null){
-				core.Debug.p("coord not null! wohoo! " + myCoord.toString());
+			
+			//map centered on certain static node, using real coordinates.
+			Map.Entry<Integer, NodePositionsSet> s = startingGlobalMap(staticNBs);
+			//core.Debug.p("***map centered on static node" + ref_id + "***");
+			//core.Debug.p(this.toString());
+			if(s != null){
+				//core.Debug.p("globalmap not null! wohoo!");
+				//core.Debug.p("t= " + SimClock.getTime() + "  base map:" + realMap(s.getValue().getMap()));
 				/*now mix this map*/
-				globalMap = NodePositionsSet.mixMap(m, myMap.getMap(), this.ref_id, myID);
-				
+				globalMap = NodePositionsSet.mixMap(s.getValue().getMap(), myMap.getMap(), ref_id, myID);
+				//core.Debug.p("mixed map:" + realMap(globalMap));
 				for(Map.Entry<Integer, NodePositionsSet> local : this.allMaps.entrySet()){
-					globalMap = NodePositionsSet.mixMap(globalMap, myMap.getMap(), ref_id, myID);
+					//core.Debug.p("adding localmap " + local.getKey());
+					Map<Integer, Coord> newMap = NodePositionsSet.mixMap(globalMap, local.getValue().getMap(), ref_id, local.getKey());
+					if(newMap != null){
+						globalMap = newMap;
+						mapExists = true;
+						//core.Debug.p("mixed again:" + realMap(globalMap));
+					}
 				}
 				if(globalMap == null) return -1;
-				else return 0;
+				this.updateTime = SimClock.getTime();
+				return globalMap.size();
 			}
 			else{
 				//core.Debug.p("can't determine global coordinates");
@@ -204,7 +237,19 @@ public class GlobalMap {
 			}
 		}
 	}
-	
+	//shifted by ref_c
+	public Coord realCoord(Coord c){
+		//core.Debug.p("ref: " + ref_c.toString());		
+		//core.Debug.p("c: " + c.toString());
+		if(c == null){
+			core.Debug.p("trying to get realcoord of null coord..");
+		}
+		Coord ret = new Coord(c.getX() + ref_c.getX(), c.getY() + ref_c.getY());
+		//Coord ret2 = new Coord(c.getY() + ref_c.getX(), c.getX() + ref_c.getY());
+		//core.Debug.p("new: " + ret.toString());
+		return ret;
+
+	}
 	
 	public int mixMap(NodePositionsSet other){
 		//core.Debug.p("mixing maps");
@@ -244,7 +289,6 @@ public class GlobalMap {
 	
 	
 /*get the coord of my point*/
-private static final double EPSILON = 3;
 private static Coord findCoordinate(Coord p0, Coord p1, Coord p2, double r0, double r1, double r2){
 
 	double x0, y0, x1, y1, x2, y2;
@@ -334,6 +378,243 @@ private static Coord findCoordinate(Coord p0, Coord p1, Coord p2, double r0, dou
 		//core.Debug.p("no intersection");
 		return null;
 	}
+}
+
+
+public Map.Entry<Integer, NodePositionsSet> startingGlobalMap(ArrayList<Integer> staticNBs){
+
+	core.Debug.p("***** starting globalmap " + this.myID + " *****");
+	int node_i  = -1; int node_p = -1; int node_q = -1;
+	Coord coord_i = new Coord(0.0,0.0);
+	Coord coord_o = new Coord(0.0,0.0);
+	double dist_i_j, dist_i_p, dist_i_q, dist_p_j, dist_q_j, dist_p_q, ang, alpha, beta, x, y;
+	
+	Map<Integer, Coord> output = new HashMap<Integer, Coord>();
+	Map<Integer, Coord> map = this.myMap.getMap();
+	
+	for(Integer st : staticNBs){
+		//core.Debug.p("nb " + st);
+		if(node_i < 0 && map.containsKey(st)){
+			node_i = st;
+			coord_i = staticNodes.get(st);
+			//core.Debug.p("node_i:" + st);
+			output.put(st, new Coord(0.0,0.0));
+		}
+		else if(map.containsKey(st)){ 
+			if(node_p < 0){ 
+				node_p = st;
+				core.Debug.p("node_p: " + st);
+			}
+			else if(node_q < 0){
+				node_q = st;
+				//core.Debug.p("node_q: " + st);
+			}
+			Coord newcord = new Coord(staticNodes.get(st).getX()-coord_i.getX(), staticNodes.get(st).getY()-coord_i.getY());
+			//core.Debug.p("node " + st + ": " + newcord.toString());
+			output.put(st, newcord);
+		}
+	}
+	//core.Debug.p("outputsize: " + output.size());
+	if(output.size() < 3 || node_i < 0 || node_p < 0 || node_q < 0) return null;
+	
+	//now add our node - use staticnode coords
+	dist_i_p = coord_i.distance(staticNodes.get(node_p));
+	dist_i_q = coord_i.distance(staticNodes.get(node_q));
+	dist_p_q = staticNodes.get(node_p).distance(staticNodes.get(node_q));
+	//this uses myMap;
+	dist_i_j = coord_o.distance(this.myMap.getCoord(node_i));
+	dist_p_j = coord_o.distance(this.myMap.getCoord(node_p));
+	dist_q_j = coord_o.distance(this.myMap.getCoord(node_q));
+
+	if(dist_i_j > 0 && dist_p_j > 0 && dist_q_j > 0){
+		
+		ang = Math.acos(
+				(dist_i_p*dist_i_p + dist_i_q*dist_i_q - dist_p_q*dist_p_q)/(2*dist_i_p*dist_i_q));
+		
+		alpha = Math.acos(
+				(dist_i_j*dist_i_j + dist_i_p*dist_i_p - dist_p_j*dist_p_j)/(2*dist_i_j*dist_i_p));
+		
+		beta = Math.acos(
+				(dist_i_j*dist_i_j + dist_i_q*dist_i_q - dist_q_j*dist_q_j)/(2*dist_i_j*dist_i_q));
+		
+		x = dist_i_j*Math.cos(alpha);
+		/*see what side it is on */
+		
+		double angdiff = Math.abs(alpha-ang);
+		
+//		if(output.get(node_p).getX() == 0.0) core.Debug.p("CASO 1A");
+//		if(output.get(node_p).getX() > 0.0) core.Debug.p("CASO 1B");
+//		if(output.get(node_p).getX() < 0.0) core.Debug.p("CASO 1C");
+//		
+//		if(output.get(node_p).getY() == 0.0) core.Debug.p("CASO 2A");
+//		if(output.get(node_p).getY() > 0.0) core.Debug.p("CASO 2B");
+//		if(output.get(node_p).getY() < 0.0) core.Debug.p("CASO 2C");
+//
+//		if(output.get(node_q).getX() == 0.0) core.Debug.p("CASO 3A");
+//		if(output.get(node_q).getX() > 0.0) core.Debug.p("CASO 3B");
+//		if(output.get(node_q).getX() < 0.0) core.Debug.p("CASO 3C");
+//
+//		if(output.get(node_q).getY() == 0.0) core.Debug.p("CASO 4A");
+//		if(output.get(node_q).getY() > 0.0) core.Debug.p("CASO 4B");
+//		if(output.get(node_q).getY() < 0.0) core.Debug.p("CASO 4C");
+//
+//		if(output.get(node_p).getX() == output.get(node_q).getX()) core.Debug.p("CASO 5A");
+//		if(output.get(node_p).getX() > output.get(node_q).getX()) core.Debug.p("CASO 5B");
+//		if(output.get(node_p).getX() < output.get(node_q).getX()) core.Debug.p("CASO 5C");
+//
+//		if(output.get(node_p).getY() == output.get(node_q).getY()) core.Debug.p("CASO 6A");
+//		if(output.get(node_p).getY() > output.get(node_q).getY()) core.Debug.p("CASO 6B");
+//		if(output.get(node_p).getY() < output.get(node_q).getY()) core.Debug.p("CASO 6C");
+//		
+		if(Math.abs(beta-angdiff) < EPSILON){
+			y = dist_i_j*Math.sin(alpha);
+		}
+		else{
+			y = -dist_i_j*Math.sin(alpha);
+		}
+		boolean vert = true;
+		boolean mirr = true;
+		if(output.get(node_p).getX() == output.get(node_i).getX()){
+			if(output.get(node_q).getY() == 0 && output.get(node_q).getX() != output.get(node_p).getY()){
+				vert = true;
+				mirr = false;
+
+			}
+			else if(output.get(node_q).getX() == output.get(node_p).getY()){
+				vert = false;
+				mirr = true;
+			}
+			else{
+				vert = true;
+				mirr = true;
+			}
+		}
+		else if(output.get(node_p).getY() == output.get(node_i).getY()){
+			if(output.get(node_q).getX() == 0){
+				vert = false;
+				mirr = false;
+			}
+			else{
+				vert = false;
+				mirr = true;
+			}
+		}
+		if(vert == true && mirr == false){
+			output.put(myID, new Coord(-y,x));
+		}
+		else if(vert == true && mirr == true){
+			output.put(myID, new Coord(-y, x));
+		}
+		else if(vert == false && mirr == false){
+			output.put(myID, new Coord(x,y));
+		}
+		else{
+			output.put(myID, new Coord(y,x));
+		}
+	}
+	
+	this.ref_id = node_i;
+	this.ref_c = coord_i;
+	List<Integer> l = new ArrayList<Integer>();
+	l.addAll(staticNodes.keySet());
+	
+	NodePositionsSet ret = new NodePositionsSet(this.ref_id, l, output);
+	this.globalMap = output;
+	this.mapExists = true;
+	this.synced = 0;
+	return new AbstractMap.SimpleEntry(node_i, ret);
+}
+
+
+
+//
+//
+///**Get an initial map with at least 3 static nodes using their real coordinates */
+//public Map.Entry<Integer, NodePositionsSet> startingGlobalMap(ArrayList<Integer> staticNBs){
+//	core.Debug.p("**** making global map ****");
+//	
+//	boolean rot = false;
+//	List<Integer> l = new ArrayList<Integer>();
+//	l.addAll(staticNodes.keySet());
+//	int statid = -1, node_p = -1, node_q = -1;
+//	Coord statc = new Coord(0.0,0.0);
+//	
+//	Map<Integer, Coord> output = new HashMap<Integer, Coord>();
+//	
+//	Map<Integer, Coord> map = this.myMap.getMap();
+//	for(Integer st : staticNBs){
+//		if(statid < 0 && map.containsKey(st)){
+//			//set this coord as 0.0, and save it's shift for future reference
+//			statid = st;
+//			statc = staticNodes.get(st);
+//			output.put(st, new Coord(0.0,0.0));
+//			//core.Debug.p("first coord "  + st + ": " + map.get(st).toString() + " => " + statc.toString() + "set as 0,0");
+//		}
+//		else if(map.containsKey(st)){
+//			//find our 2nd node, with equal x or y
+//			snx = staticNodes.get(statid).getX();
+//			sny = staticNodes.get(statid).getY();
+//			stx = staticNodes.get(st).getX();
+//			sty = staticNodes.get(st).getX()
+//			if(stat2 < 0 && snx == stx){
+//				//equal X, must rotate pi/2.
+//				rot = true;
+//				output.put(st, new Coord(sny-sty, 0.0));
+//			}
+//			else if(stat2 < 0 && sny == sty){
+//				//equal Y, we're in the good coords!
+//				stat2 = st;
+//				output.put(st, new Coord(snx-stx, 0.0));
+//			}			
+//			//we have two references: add the shifted ones to the map.
+//			Coord newcord = new Coord(staticNodes.get(st).getX()-statc.getX(), staticNodes.get(st).getY()-statc.getY());
+//			output.put(st, newcord);
+//			//core.Debug.p("following coord " + st + ":"  + map.get(st).toString() + " => " + staticNodes.get(st).toString() + " set as " + newcord.toString());	
+//		}
+//	}
+//	
+//	if(output.size() < 3 || statid < 0 || stat2 < 0) return null;
+//	else{
+//		if(rot == true){
+//			for(Map.Entry<Integer, Coord> ent : output.entrySet()){
+//				output.replace(ent.getKey(), new Coord(ent.getValue().getY(), ent.getValue().getX()));
+//			}
+//		}
+//		//add my node
+//		double alpha_j = Math.acos()
+//		
+//		
+//		this.ref_id = statid;
+//		this.ref_c = statc;
+//		this.ref_id2 = stat2;
+//		NodePositionsSet ret = new NodePositionsSet(this.ref_id, l, output);
+//		this.globalMap = output;
+//		return new AbstractMap.SimpleEntry(this.ref_id, ret);
+//	}
+//	//
+//	}
+	
+
+@Override
+public String toString(){
+	String s = "globalmap " + myID + ":";
+	if(mapExists){
+		for(Map.Entry<Integer, Coord> e : globalMap.entrySet()){
+			s += "[" + e.getKey() + ": " + realCoord(e.getValue()).toString() + "]";
+		}
+	}
+	else{
+		s += "no map found";
+	}
+	return s;
+}
+
+public String realMap(Map<Integer, Coord> map){
+	String s = "";
+		for(Map.Entry<Integer, Coord> e : map.entrySet()){
+			s += "[" + e.getKey() + ": " + realCoord(e.getValue()).toString() + "]";
+		}
+	return s;
 }
 
 }
