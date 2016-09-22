@@ -17,7 +17,7 @@ import java.util.TreeSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.AbstractMap.SimpleEntry;
-
+import java.lang.Double;
 import core.Coord;
 import core.SimClock;
 
@@ -270,8 +270,8 @@ public class NodePositionsSet {
 					else{
 						y = -dist_i_n*Math.sin(alpha);
 					}
-
-					this.myMap.put(n, new Coord(x, y));
+					if(!(Double.isNaN(x) || Double.isNaN(y)))
+						this.myMap.put(n, new Coord(x, y));
 					
 					/*we see if it's static*/
 					if(staticIDs.contains(n)) staticCount++;
@@ -292,8 +292,9 @@ public class NodePositionsSet {
 				
 		double deltax = orig.getX();
 		double deltay = orig.getY();
-		for(Map.Entry<Integer, Coord> entry : map.entrySet())
+		for(Map.Entry<Integer, Coord> entry : map.entrySet()){
 			ret.put(entry.getKey(), new Coord(entry.getValue().getX() + deltax, entry.getValue().getY() + deltay));
+		}
 		return ret;
 	}
 	
@@ -316,15 +317,15 @@ public class NodePositionsSet {
 	/*mirror through y axis*/
 	public static Map<Integer, Coord> mirror(Map<Integer, Coord> map){
 		Map<Integer, Coord> ret = new HashMap<Integer, Coord>();
-		for(Map.Entry<Integer, Coord> entry: map.entrySet())
+		for(Map.Entry<Integer, Coord> entry: map.entrySet()){
 			ret.put(entry.getKey(), new Coord(-(entry.getValue().getX()), entry.getValue().getY()));
+		}
 		return ret;
 	}
 	
 	/*find suitable neighbor for angle correction*/
 	public static int findNeighbor(Map<Integer, Coord> map1, Map<Integer, Coord> map2, int id1, int id2){
 		if(map1 == null || map2 == null){
-			core.Debug.p("null map?");
 			return -1;
 		}
 		int k = -1;
@@ -350,7 +351,7 @@ public class NodePositionsSet {
 		Map<Integer, Coord> ret = new HashMap<Integer, Coord>();
 		//first: pick the neighbors we share to triangulate -- we use 2
 		int nb = findNeighbor(map1, map2, id1, id2);
-		
+		//core.Debug.p("id1:" + id1 + ", id2:" + id2 + ", nb:" + nb);
 		if(nb < 0){
 			core.Debug.p("No suitable neighbor found for mixing maps");
 			return null;
@@ -366,6 +367,8 @@ public class NodePositionsSet {
 		Coord k_map1 = map1.get(id2);
 		Coord i_map2 = map2.get(id1);
 		
+		//core.Debug.p(toString(map1, id1));
+		//core.Debug.p(toString(map2, id2));
 		if(j_map1 == null){
 			core.Debug.p("my nodes are not neighbors between themselves????? c1");
 			return null;
@@ -387,18 +390,31 @@ public class NodePositionsSet {
 		double beta_i = Math.atan2(i_map2.getY(), i_map2.getX());
 		double beta_j = Math.atan2(j_map2.getY(), j_map2.getX());
 		
-		if( ((alpha_j - alpha_k <= Math.PI) && (beta_j-beta_i >= Math.PI)) 
-				|| ((alpha_j - alpha_k >= Math.PI) && (beta_j - beta_i <= Math.PI))){
+		double aj_ak = alpha_j - alpha_k;
+		double bj_bi = beta_j - beta_i;
+		
+		//core.Debug.p("aj -ak: " + aj_ak);
+		//core.Debug.p("bj -bi: " + bj_bi);
+		
+		if(aj_ak< 0) aj_ak = Math.PI*2-aj_ak;
+		if(bj_bi< 0) bj_bi = Math.PI*2-bj_bi;
+		
+		//core.Debug.p("aj -ak: " + aj_ak);
+		//core.Debug.p("bj -bi: " + bj_bi);
+		
+		if( ((aj_ak <= Math.PI) && (bj_bi >= Math.PI)) 
+				|| ((aj_ak >= Math.PI) && (bj_bi <= Math.PI))){
 			mirr = false;
 			corr = beta_i - alpha_k + Math.PI;
+			//core.Debug.p("CASE A");
 		}
-		else if(((alpha_j - alpha_k <= Math.PI) && (beta_j-beta_i <= Math.PI)) 
-				|| ((alpha_j - alpha_k >= Math.PI) && (beta_j - beta_i >= Math.PI))){
+		else if(((aj_ak <= Math.PI) && (bj_bi <= Math.PI)) 
+				|| ((aj_ak >= Math.PI) && (bj_bi >= Math.PI))){
 			mirr = true;
 			corr = beta_i + alpha_k;
+			//core.Debug.p("CASE B");
 		}
 		else{
-			core.Debug.p("alpha_diff:" + (alpha_j - alpha_k) + ", beta_diff: " + (beta_j - beta_i));
 			System.out.println("weird angles");
 			return null;
 		}
@@ -406,7 +422,9 @@ public class NodePositionsSet {
 		ret = rotate(map2, id2, corr);
 		if(mirr) ret = mirror(ret);
 		ret = recenter(ret, map1.get(id2));
-		
+		//core.Debug.p("map2 final: " + toString(ret, id2));
+		//core.Debug.p("map1 final: " + toString(map1, id1));
+
 		/*third: mix coords*/
 		for(Map.Entry<Integer, Coord> e : ret.entrySet()){
 			if(!map1.keySet().contains(e.getKey())){
