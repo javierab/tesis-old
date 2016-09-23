@@ -17,6 +17,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.lang.Double;
 import java.util.AbstractMap.SimpleEntry;
 
 import routing.JaviRouter;
@@ -38,10 +39,10 @@ public class GlobalMap {
 	 * 1 if not synced, using someone else's map -> must merge maps
 	 */
 	final static double EPSILON = 0.2;
+	final static double TIMEOUT = 100;
 	public int myID, synced, mapCount, ref_id;
 	public Coord ref_c;
 	public boolean mapExists;
-	private Map<Integer, Double> dists;
 	private static HashMap<Integer, Coord> staticNodes;
 	private ArrayList<Integer> myMapNodes;
 	private NodePositionsSet myMap;
@@ -60,7 +61,6 @@ public class GlobalMap {
 		this.mapExists = false;
 		this.staticNodes = staticNodes;
 		
-		this.dists = new HashMap<Integer, Double>();
 		this.myMapNodes = new ArrayList<Integer>();
 		this.allMaps = new HashMap<Integer, NodePositionsSet>();
 		this.globalMap = new HashMap<Integer, Coord>();
@@ -76,7 +76,6 @@ public class GlobalMap {
 		this.mapExists = false;
 		this.staticNodes = new HashMap<Integer, Coord>();
 		
-		this.dists = new HashMap<Integer, Double>();
 		this.myMapNodes = new ArrayList<Integer>();
 		this.allMaps = new HashMap<Integer, NodePositionsSet>();
 		this.globalMap = new HashMap<Integer, Coord>();
@@ -86,6 +85,7 @@ public class GlobalMap {
 	}
 
 	public void restart(){
+		core.Debug.p("********************************restarting map: " + myID);
 		this.myMap = null;
 		this.synced = -1;
 		this.ref_id = -1;
@@ -100,18 +100,14 @@ public class GlobalMap {
 	public int updateMap(NodePositionsSet myMap){
 		/*check updated ID*/
 		if(myID == 0){
-			core.Debug.p("must set myID in global map before updating");
+			//core.Debug.p("must set myID in global map before updating");
 			return -1;
 		}
 		this.myMap = myMap;
 		synced=-1;
 		return 0;
 	}	
-	
-	public void setDists(Map<Integer, Double> dists){
-		this.dists = dists;
-	}
-	
+
 	/*update my map with someone else's local map*/
 	public int addMap(NodePositionsSet otherMap, int otherID){
 		if(otherMap.getMap() == null){
@@ -124,29 +120,38 @@ public class GlobalMap {
 	
 	/*update my map with someone else's global map*/
 	public int addMap(GlobalMap otherMap){
+		if(otherMap.getMap().size() < 3) return -1;
 		/*map exists, but i need to re-mix it*/
+		if(this.getCT() > (SimClock.getTime() - TIMEOUT)){
+			this.mapExists = false;
+		}
 		if(mapExists && synced == -1){
 			localmix();
 		}	
 		/*if i cant make a map yet, i use the one i got*/
 		else if(!mapExists){
-			if( makeGlobal() <= 0){
-				//just the other map
-				this.globalMap = otherMap.globalMap;
-				this.myMapNodes = otherMap.myMapNodes;
-				this.synced = 1;
-				this.mapExists = true;
-				this.ref_id = otherMap.ref_id;
-				this.ref_c = otherMap.ref_c;
-				return 1;
+			int c = makeGlobal();
+			if(c < 0){
+				if(otherMap.getCT() > (SimClock.getTime() - TIMEOUT)){
+					this.globalMap = otherMap.globalMap;
+					this.myMapNodes = otherMap.myMapNodes;
+					this.synced = 1;
+					this.mapExists = true;
+					this.ref_id = otherMap.ref_id;
+					this.ref_c = otherMap.ref_c;
+					//core.Debug.p("a");
+					return 1;
+				}
 			}
 			else{
 				this.synced = 0;
 				this.mapExists = true;
+				//core.Debug.p("b");
 			}
 		}
 		/*if i have an updated map, just join them preferring the one that used newer data*/
 		if(mapExists && (synced == 0 || synced == 1)){
+			//core.Debug.p("nene");
 			boolean newer = this.updateTime < otherMap.updateTime ? true : false;
 			//have to be careful with shifted values!
 			Coord c = new Coord(this.ref_c.getX() - otherMap.ref_c.getX(), this.ref_c.getY() - otherMap.ref_c.getY());
@@ -209,9 +214,18 @@ public class GlobalMap {
 	
 	/*make my global map. first create a map to adjust my map to real coordinates, then 'add' the nodes from the other localmaps*/
 	public int makeGlobal(){
-		if(mapExists){
+		if(mapExists && this.creationTime > SimClock.getTime() - TIMEOUT){
 		//TODO: merge new maps	
 			return globalMap.size();
+		}
+		else if(mapExists && this.creationTime <= SimClock.getTime() - TIMEOUT){
+		//restart my map
+			globalMap = null;
+			synced = -1;
+			mapExists = false;
+			ref_id = -1;
+			this.creationTime = SimClock.getTime();
+			
 		}
 		//usar 3 estáticos para ajustar coordenadas
 		
@@ -231,29 +245,25 @@ public class GlobalMap {
 			return -1;
 		}
 		else{
-			Coord c1 = staticNodes.get(staticNBs.get(0));
-			Coord c2 = staticNodes.get(staticNBs.get(1));
-			Coord c3 = staticNodes.get(staticNBs.get(2));
-			if(c1 == null || c2 == null || c3 == null) return -1;
-			
 			//map centered on certain static node, using real coordinates.
 			Map.Entry<Integer, NodePositionsSet> s = startingGlobalMap(staticNBs);
 			//core.Debug.p("***map centered on static node" + ref_id + "***");
 			//core.Debug.p(this.toString());
-			if(s != null){
+			if(s.getValue() != null){
 				//core.Debug.p("globalmap not null! wohoo!");
 				//core.Debug.p("t= " + SimClock.getTime() + "  base map:" + realMap(s.getValue().getMap()));
 				/*now mix this map*/
 				//core.Debug.p("+++mixed map:" + realMap(s.getValue().getMap()));
 				globalMap = NodePositionsSet.mixMap(s.getValue().getMap(), myMap.getMap(), ref_id, myID);
 				//core.Debug.p("+++mixed map:" + realMap(globalMap));
+				if(globalMap == null) return -1;
 				localmix();
 				if(globalMap == null) return -1;
 				this.updateTime = SimClock.getTime();
 				return globalMap.size();
 			}
 			else{
-				//core.Debug.p("can't determine global coordinates");
+				core.Debug.p("can't determine global coordinates");
 				return -1;
 			}
 		}
@@ -261,34 +271,35 @@ public class GlobalMap {
 	
 	private void localmix(){
 		//core.Debug.p("starting localmix");
+		ArrayList<Integer> keysToRemove = new ArrayList<Integer>();
 		for(Map.Entry<Integer, NodePositionsSet> local : this.allMaps.entrySet()){
+			//don't use old maps
+			if(local.getValue() == null || local.getValue().updateTime < (SimClock.getTime() - TIMEOUT)) {
+				keysToRemove.add(local.getKey());
+				continue;
+			}
 			//core.Debug.p("adding localmap " + local.getKey() + "time: " + SimClock.getTime());
 			//see if i can use my current reference or if i need to change it
 			Map<Integer, Coord> currentlocal = local.getValue().getMap();
+
 			//null map, omit it.
 			if(currentlocal == null){
-				;
+				keysToRemove.add(local.getKey());
 				//useless map, we just remove it.
 			}
-			//we have each other
+
 			else if(globalMap.containsKey(local.getKey()) && currentlocal.containsKey(ref_id)){
-				//core.Debug.p("lalalal");
 				Map<Integer, Coord> newMap = NodePositionsSet.mixMap(globalMap, currentlocal, ref_id, local.getKey());
 				if(newMap != null){
 					globalMap = newMap;
-					core.Debug.p(this.toString());
 					mapExists = true;
-					//core.Debug.p("localmix - have both ref");
-					checkGlobalMap();
-					//core.Debug.p("mixed again:" + realMap(globalMap));
+					this.updateTime = SimClock.getTime();
 				}
 			}
 			//if it doesn't, i have to find a node that we share
-			else{
-				//core.Debug.p("lelelel");
+			else if(globalMap.get(local.getKey()) != null){
 				int tempID = -1;
 				Coord tempC = new Coord(0.0,0.0);
-				//find temporate coordinate
 				for(Map.Entry<Integer, Coord> i: globalMap.entrySet()){
 					if(i.getKey() != this.myID && i.getKey() != local.getKey() && currentlocal.containsKey(i.getKey())){
 						tempID = i.getKey();
@@ -296,24 +307,26 @@ public class GlobalMap {
 						break;
 					}
 				}
-				//core.Debug.p("temp: " + tempID);
-				//if we find one try to mix
 				if(tempID>0){
 					Map<Integer, Coord> newMap = NodePositionsSet.mixMap(shiftMap(this.globalMap, tempC), currentlocal, tempID, local.getKey());
 					if(newMap != null){
 						globalMap = shiftMap(newMap, new Coord(-(tempC.getX()), -(tempC.getY())));
 						mapExists = true;
+						this.updateTime = SimClock.getTime();
 						//core.Debug.p("localmix - new ref");
-						checkGlobalMap();
 					}
 				}
 			}
+			else{
+				globalMap.remove(local.getKey());
+			}
+		}
+		for(Integer i: keysToRemove){
+			this.allMaps.remove(i);
+			//core.Debug.p("removing map "+ i);
 		}
 		//DEBUG: see diffs with statics
-
-		//System.out.println("GLOBAL:" + this.toString());
 		synced = 0;
-		updateTime = SimClock.getTime();
 		
 	}
 
@@ -328,7 +341,6 @@ public class GlobalMap {
 	//globalmap shifted by coordinate c.
 	public static Map<Integer, Coord> shiftMap(Map<Integer, Coord> map, Coord c){
 		Map<Integer, Coord> retmap = new HashMap<Integer, Coord>();
-		
 		if(c == null || map == null) {core.Debug.p("WUT"); return null;}
 		for(Map.Entry<Integer, Coord> i: map.entrySet())
 				retmap.put(i.getKey(), new Coord(i.getValue().getX() - c.getX(), i.getValue().getY() - c.getY()));

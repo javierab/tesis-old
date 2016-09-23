@@ -83,8 +83,8 @@ public class JaviRouter extends ActiveRouter {
 	public HashMap<Integer, Coord> staticNodes;
 	public HashMap<Integer, DTNHost> seenHosts;
 	
-	double mapError;
-	double lastClock;
+	public double mapError;
+	public double lastClock;
 	private HashMap<Double, Double> avgMapError;
 	private HashMap<Double, Integer> mapSize;
 	
@@ -165,10 +165,15 @@ public class JaviRouter extends ActiveRouter {
         //for static: x, y
         staticNodes = new HashMap<Integer, Coord>();
         for(int i = 0; i < staticCount; i++){
-        	int id = JaviSettings.getInt(STATICNODE + i + ".id");
-        	int x = JaviSettings.getInt(STATICNODE + i + ".x");
-        	int y = JaviSettings.getInt(STATICNODE + i + ".y");
-        	staticNodes.put(id, new Coord(x,y));
+        	String s = JaviSettings.getSetting(STATICNODE+i);
+        	String[] n = s.split(" ");
+        	try{
+        		staticNodes.put(Integer.parseInt(n[0]), new Coord(Double.parseDouble(n[1]),Double.parseDouble(n[2])));
+        	}
+        	catch(Exception e){
+        		System.out.println("Can't parse the static node " + i + " info.");
+        		System.exit(1);
+        	}
         }
         
 	}
@@ -240,14 +245,14 @@ public class JaviRouter extends ActiveRouter {
 			}
 
 			//i restart my global map if it is too old.
-			if(globalmap.getCT() % GLOBAL_TIMEOUT == 0.0) globalmap.restart();
+			//core.Debug.p("globalmap CT: " + (SimClock.getTime() - globalmap.getCT()) + ", GTO:" + GLOBAL_TIMEOUT + ", %0?" + ((SimClock.getTime() - globalmap.getCT())% GLOBAL_TIMEOUT));
+			//if((SimClock.getTime() - globalmap.getCT()) % GLOBAL_TIMEOUT == 0.0) globalmap.restart();
 			this.localmap.setID(myID);
 			this.globalmap.setID(myID);
 			/*update my distance to the node*/
 			double mapTimeout = dists.update(otherID, getHost().getDistance(otherHost));
 			allDists.put(myID, dists);
 			allDists.put(otherID, otherRouter.dists);
-			globalmap.setDists(dists.dist);
 			/*update distances and calculate new local map*/
 			staticCount = localmap.update(allDists, true);
 			globalmap.updateMap(localmap);
@@ -278,7 +283,7 @@ public class JaviRouter extends ActiveRouter {
 
 				//*Case 1: I have enough static nodes, I compute the globalmap and try to add his local*
 				if(this.staticCount >= 3){ 
-					core.Debug.p("case1 - my staticcount>3");
+					//core.Debug.p("case1 - my staticcount>3");
 					
 					//core.Debug.p(localmap.toString());
 
@@ -286,12 +291,12 @@ public class JaviRouter extends ActiveRouter {
 					this.globalmap.addMap(otherRouter.localmap, otherID);
 					/*I try to compute globalmap*/
 					int glb = this.globalmap.makeGlobal();
-					core.Debug.p("n " + myID + " glb " + glb);
+					//core.Debug.p("n " + myID + " glb " + glb);
 					//core.Debug.p("diff " + myID + ": " + this.globalmap.getGlobalCoord(myID).toString() + " vs " + myLoc.toString());
 					//core.Debug.p("1-glb: " + this.globalmap.toString());
 					/* If I succeed, send globalmap and update his with mine */
 					if(glb > 0){
-						mapError();
+						//mapError();
 						otherRouter.globalmap.addMap(this.globalmap);
 					}/* If I fail, send localmap */
 					else{
@@ -304,7 +309,7 @@ public class JaviRouter extends ActiveRouter {
 				 * he computes the globalmap and shares with me
 				 * */
 				else if(otherRouter.staticCount>= 3){
-					core.Debug.p("case2 - otherstaticcount>3");
+					//core.Debug.p("case2 - otherstaticcount>3");
 					/*I send my local map*/
 					otherRouter.globalmap.addMap(this.localmap, myID);
 					/*Other triescomputes globalmap*/
@@ -315,7 +320,7 @@ public class JaviRouter extends ActiveRouter {
 					/* If he succeeds, send me his globalmap and update mine with his */
 					if(glb > 0){
 						this.globalmap.addMap(otherRouter.globalmap);
-						mapError();
+						//mapError();
 					}/* If he fails, he just sends me his localmap */
 					else{
 						this.globalmap.addMap(otherRouter.localmap, otherID);
@@ -343,32 +348,37 @@ public class JaviRouter extends ActiveRouter {
 			updateTransferredBytesAvg(con.getTotalBytesTransferred());
 		}
 	}
-	
-
 
 	/**
 	 * Computes the error of the current global map
 	 * 
 	 */
 	public void mapError(){
-		core.Debug.p("*****running maperror " + SimClock.getTime());
 		Map<Integer, Coord> global = this.globalmap.getGlobalMap();
 		if(global != null && (SimClock.getTime() > lastClock + 1.0)){
-			core.Debug.p("*****OK");
+			core.Debug.p("**maperror**");
 			this.mapError = 0.0;
+			double currentError = 0.0;
+			int maxErrorNode = 0;
+			double maxError = 0.0;
 			int ct = 0;
 			if(global.size() > 0){
 				for(Map.Entry<Integer, Coord> pos : global.entrySet()){
 					if(this.seenHosts.containsKey(pos.getKey())){
-						//core.Debug.p("c1: " + pos.getValue().toString() + ", c2: " + this.seenHosts.get(pos.getKey()).getLocation());
-						this.mapError += pos.getValue().distance(this.seenHosts.get(pos.getKey()).getLocation());
+						currentError = pos.getValue().distance(this.seenHosts.get(pos.getKey()).getLocation());
+						if(maxError < currentError){ 
+							maxError = currentError;
+							maxErrorNode = pos.getKey();
+						}
+						mapError+=currentError;
 					}
 					else ct++;
 				}
 				this.mapError = mapError/(global.size()-ct);
-				core.Debug.p("***\nnode: " + this.globalmap.myID);
+				core.Debug.p("*** node: " + this.globalmap.myID);
 				core.Debug.p("time: " + SimClock.getTime());
-				core.Debug.p("error: " + mapError);
+				core.Debug.p("avg error: " + mapError);
+				core.Debug.p("max error: " + maxError + " on node:" + maxErrorNode);
 				core.Debug.p("size: " + global.size());
 			}
 			this.lastClock = SimClock.getTime();

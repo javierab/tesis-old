@@ -27,6 +27,7 @@ import core.SimClock;
  */
 public class NodePositionsSet {
 	
+	final double TIMEOUT = 100.0;
 	final double EPSILON = 0.01;
 	int myID;
 	public boolean synced = true;
@@ -34,7 +35,7 @@ public class NodePositionsSet {
 	private List<Integer> myNeighbors;
 	Map<Integer, NodeDistancesSet> allNeighbors;
 	Map<Integer, Coord> myMap, myMapOld;
-	double creationTime, updateTime;
+	public double creationTime, updateTime;
 	
 	public NodePositionsSet(Map<Integer, NodeDistancesSet> allNeighbors, int myID, ArrayList<Integer> staticIDs){
 	
@@ -353,7 +354,7 @@ public class NodePositionsSet {
 		int nb = findNeighbor(map1, map2, id1, id2);
 		//core.Debug.p("id1:" + id1 + ", id2:" + id2 + ", nb:" + nb);
 		if(nb < 0){
-			core.Debug.p("No suitable neighbor found for mixing maps");
+			//core.Debug.p("No suitable neighbor found for mixing maps");
 			return null;
 		}
 		//second: get the angles and find if we need to mirror and get corr angle.
@@ -367,22 +368,25 @@ public class NodePositionsSet {
 		Coord k_map1 = map1.get(id2);
 		Coord i_map2 = map2.get(id1);
 		
+		//core.Debug.p("coords j1" + j_map1 + ", j2:" + j_map2 + ", k1:" + k_map1 + ", i2:" + i_map2);
+		
+		
 		//core.Debug.p(toString(map1, id1));
 		//core.Debug.p(toString(map2, id2));
 		if(j_map1 == null){
-			core.Debug.p("my nodes are not neighbors between themselves????? c1");
+			//core.Debug.p("my nodes are not neighbors between themselves????? c1");
 			return null;
 		}
 		if(j_map2 == null){
-			core.Debug.p("my nodes are not neighbors between themselves????? c2");
+			//core.Debug.p("my nodes are not neighbors between themselves????? c2");
 			return null;
 		}
 		if(k_map1 == null){
-			core.Debug.p("my nodes are not neighbors between themselves????? c3");
+			//core.Debug.p("my nodes are not neighbors between themselves????? c3");
 			return null;
 		}
 		if(i_map2 == null){
-			core.Debug.p("my nodes are not neighbors between themselves????? c4");
+			//core.Debug.p("my nodes are not neighbors between themselves????? c4");
 			return null;
 		}
 		double alpha_j = Math.atan2(j_map1.getY(), j_map1.getX());
@@ -415,7 +419,7 @@ public class NodePositionsSet {
 			//core.Debug.p("CASE B");
 		}
 		else{
-			System.out.println("weird angles");
+			//System.out.println("weird angles: aj-ak " + aj_ak + ", bj-bi " + bj_bi);
 			return null;
 		}
 		

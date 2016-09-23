@@ -20,8 +20,7 @@ import core.DTNHost;
  */
 public class NodeDistancesSet {
 	public static final int INFINITE_SET_SIZE = 1000;
-	public static final double DEFAULT_TIMEOUT = 60;
-	public static final double FACTOR = 1.0;
+	public static final double DEFAULT_TIMEOUT = 100;
 	/** javi: distances, and time for known neighbors */
 	public Map<Integer, Double> dist;
 	private Map<Integer, Double> knownNeighbors;
@@ -69,12 +68,16 @@ public class NodeDistancesSet {
 		/* check my map and drop values too old */
 		//core.Debug.p("pre:" + knownNeighbors.size() + ", " + dist.size());
 		this.knownNeighbors.forEach((k, v) -> { /*delete the values older than F*D_T old*/
-			if( v < lastUpdateTime - FACTOR * DEFAULT_TIMEOUT ) {
+			if( v < lastUpdateTime - DEFAULT_TIMEOUT ) {
+				//core.Debug.p("removing v");
 			    this.knownNeighbors.remove(k);
 				this.dist.remove(k);
 			}
-			else if(v < this.oldestTime) this.oldestTime = v;
-			});
+			else if(v < this.oldestTime){
+				//core.Debug.p("new oldest time:" + v);
+				this.oldestTime = v;
+			}
+		});
 		//core.Debug.p("post:" + knownNeighbors.size()  + ", " + dist.size());
 
 	}
@@ -112,7 +115,7 @@ public class NodeDistancesSet {
 		}
 	}
 
-	public Map<Integer, Double> getAllDist() {
+	public Map<Integer, Double> getDists() {
 		return this.dist;
 	}
 	
